@@ -1,12 +1,36 @@
+---
+import '../styles/global.css';
+
+type Props = {
+	title?: string;
+	description?: string;
+};
+
+const {
+	title = 'PetCare | ペットの毎日を記録しよう',
+	description = 'PetCareは犬・猫の健康記録をサポートするシンプルなペットヘルスケアアプリです。',
+} = Astro.props;
+---
+
 <!doctype html>
-<html lang="en">
+<html lang="ja">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<meta name="description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:locale" content="ja_JP" />
+		<meta property="og:site_name" content="PetCare" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="theme-color" content="#5DA9D6" />
+		<title>{title}</title>
 	</head>
 	<body>
 		<slot />
@@ -19,5 +43,10 @@
 		margin: 0;
 		width: 100%;
 		height: 100%;
+	}
+
+	body {
+		background: var(--color-page);
+		color: var(--color-text-primary);
 	}
 </style>

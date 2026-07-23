@@ -1,11 +1,17 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import { PoopLogApp } from '../components/PoopLogApp';
+import AppHeader from '../components/AppHeader.astro';
+import { PetProfilePanel } from '../components/PetProfilePanel';
+import { TodayHero } from '../components/TodayHero';
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="PetCare | ペットの毎日を記録しよう" description="PetCareは犬・猫の健康記録をサポートするシンプルなペットヘルスケアアプリです。">
+	<AppHeader />
+
+	<main class="mx-auto max-w-xl px-4 py-6 sm:px-5 sm:py-8">
+		<TodayHero client:load />
+		<PetProfilePanel variant="home" client:load />
+		<PoopLogApp client:load />
+	</main>
 </Layout>

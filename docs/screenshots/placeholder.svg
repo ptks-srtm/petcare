@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title description">
+  <title id="title">PetCare screenshot placeholder</title>
+  <desc id="description">PetCareのスクリーンショットを後から掲載するためのプレースホルダー</desc>
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7cc8be" />
+      <stop offset="0.5" stop-color="#5da9d6" />
+      <stop offset="1" stop-color="#4a7ccb" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="600" rx="32" fill="#f7f9fa" />
+  <rect x="80" y="64" width="800" height="472" rx="28" fill="#ffffff" stroke="#dce8ec" stroke-width="2" />
+  <rect x="120" y="112" width="72" height="72" rx="22" fill="url(#brand)" />
+  <text x="216" y="145" fill="#1e293b" font-family="system-ui, sans-serif" font-size="30" font-weight="600">PetCare</text>
+  <text x="216" y="173" fill="#64748b" font-family="system-ui, sans-serif" font-size="16">ペットの毎日を記録しよう</text>
+  <rect x="120" y="224" width="720" height="208" rx="24" fill="#f8fafc" stroke="#dce8ec" />
+  <text x="480" y="314" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="24" font-weight="600">Screenshot coming soon</text>
+  <text x="480" y="352" text-anchor="middle" fill="#64748b" font-family="system-ui, sans-serif" font-size="16">アプリ画面のスクリーンショットを準備中です</text>
+  <rect x="344" y="388" width="272" height="6" rx="3" fill="url(#brand)" opacity="0.8" />
+</svg>

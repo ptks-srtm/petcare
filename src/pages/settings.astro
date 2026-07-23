@@ -1,0 +1,37 @@
+---
+import AppHeader from '../components/AppHeader.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { PetProfilePanel } from '../components/PetProfilePanel';
+import { DataManagement } from '../components/DataManagement';
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="設定 | PetCare" description="PetCareのプロフィール、記録設定、バックアップを管理します。">
+	<AppHeader />
+	<main class="mx-auto max-w-xl px-4 py-6 sm:px-5 sm:py-8">
+		<PageHeader backHref="/" backLabel="ホームへ戻る" title="設定" />
+		<PetProfilePanel variant="settings" client:load />
+
+		<section aria-labelledby="record-settings-title" class="mt-8">
+			<h2 id="record-settings-title" class="mb-3 px-1 text-lg font-semibold text-slate-800">記録</h2>
+			<div class="pc-card overflow-hidden">
+				<a href="/settings/poop-locations" class="flex min-h-14 items-center justify-between gap-4 px-5 text-sm transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky"><span class="font-medium text-slate-700">うんちをした場所</span><span class="text-lg leading-none text-slate-400" aria-hidden="true">›</span><span class="sr-only">設定画面を開く</span></a>
+			</div>
+		</section>
+
+		<DataManagement client:load />
+
+		<section aria-labelledby="about-title" class="mt-8">
+			<h2 id="about-title" class="mb-3 px-1 text-lg font-semibold text-slate-800">このアプリについて</h2>
+			<div class="pc-card p-5">
+				<div><p class="text-base font-semibold text-slate-800">PetCare</p><p class="mt-1 text-sm text-slate-500">ペットの毎日を、やさしく記録するアプリ</p></div>
+				<dl class="mt-5 divide-y divide-slate-100 border-t border-slate-100 text-sm">
+					<div class="flex min-h-12 items-center justify-between gap-4"><dt class="text-slate-500">Version</dt><dd class="font-medium text-slate-700">1.0.0</dd></div>
+					<div class="flex min-h-12 items-center justify-between gap-4"><dt class="text-slate-500">開発者</dt><dd class="font-medium text-slate-700">PetCare Project</dd></div>
+					<div class="flex min-h-12 items-center justify-between gap-4"><dt class="text-slate-500">GitHub</dt><dd class="font-medium text-slate-400">準備中</dd></div>
+					<div class="flex min-h-12 items-center justify-between gap-4"><dt class="text-slate-500">データ保存場所</dt><dd class="font-medium text-slate-700">ブラウザ内</dd></div>
+				</dl>
+			</div>
+		</section>
+	</main>
+</Layout>

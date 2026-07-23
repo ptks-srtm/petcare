@@ -1,0 +1,16 @@
+---
+import AppHeader from '../components/AppHeader.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { PoopLogApp } from '../components/PoopLogApp';
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="健康記録 | PetCare" description="うんち・ごはん・さんぽの記録を、日ごとのタイムラインで振り返れます。">
+	<AppHeader />
+
+	<main class="mx-auto max-w-xl px-4 py-6 sm:px-5 sm:py-8">
+		<PageHeader backHref="/" backLabel="ホームへ戻る" title="健康記録" description="うんち・ごはん・さんぽを日ごとに新しい順で振り返れます" />
+
+		<PoopLogApp view="history" client:load />
+	</main>
+</Layout>

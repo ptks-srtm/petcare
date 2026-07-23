@@ -1,0 +1,12 @@
+---
+import AppHeader from '../../components/AppHeader.astro';
+import { PetProfileForm } from '../../components/PetProfileForm';
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="プロフィール | PetCare" description="ペットのプロフィールと画像を登録・編集します。">
+	<AppHeader />
+	<main class="mx-auto max-w-xl px-4 py-6 sm:px-5 sm:py-8">
+		<PetProfileForm client:load />
+	</main>
+</Layout>
