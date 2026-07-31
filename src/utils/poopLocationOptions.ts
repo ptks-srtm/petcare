@@ -4,22 +4,11 @@ export const POOP_LOCATION_OPTIONS_STORAGE_KEY = 'petcare:poop-location-options'
 export const POOP_LOCATION_OPTIONS_CHANGED_EVENT = 'petcare:poop-location-options-changed';
 export const POOP_LOCATION_LABEL_MAX_LENGTH = 20;
 
-export const DEFAULT_POOP_LOCATION_OPTIONS: readonly PoopLocationOption[] = [
-	{ id: 'cage', label: 'ケージ内' },
-	{ id: 'hallway', label: '廊下' },
-	{ id: 'walk', label: '散歩' },
-	{ id: 'accident', label: '失敗' },
-];
-
 const legacyLocationLabels: Record<string, string> = { cage: 'ケージ内', hallway: '廊下', walk: '散歩', accident: '失敗' };
 
 export type PoopLocationMutationResult =
 	| { ok: true; options: PoopLocationOption[] }
 	| { ok: false; options: PoopLocationOption[]; error: string };
-
-function cloneDefaults() {
-	return DEFAULT_POOP_LOCATION_OPTIONS.map((option) => ({ ...option }));
-}
 
 function getLocalStorage(): Storage | null {
 	if (typeof window === 'undefined') return null;
@@ -33,7 +22,7 @@ function isOption(value: unknown): value is PoopLocationOption {
 }
 
 export function isValidPoopLocationOptionList(value: unknown): value is PoopLocationOption[] {
-	if (!Array.isArray(value) || value.length === 0 || !value.every(isOption)) return false;
+	if (!Array.isArray(value) || !value.every(isOption)) return false;
 	return new Set(value.map((option) => option.id)).size === value.length && new Set(value.map((option) => option.label)).size === value.length;
 }
 
@@ -66,17 +55,17 @@ export function getPoopLocationDisplayLabel(location: string) {
 
 export function loadPoopLocationOptions(): PoopLocationOption[] {
 	const storage = getLocalStorage();
-	if (!storage) return cloneDefaults();
+	if (!storage) return [];
 	try {
 		const stored = storage.getItem(POOP_LOCATION_OPTIONS_STORAGE_KEY);
 		if (stored) {
 			const parsed: unknown = JSON.parse(stored);
 			if (isValidPoopLocationOptionList(parsed)) return parsed;
 		}
-		const defaults = cloneDefaults();
-		storage.setItem(POOP_LOCATION_OPTIONS_STORAGE_KEY, JSON.stringify(defaults));
-		return defaults;
-	} catch { return cloneDefaults(); }
+		const initialOptions: PoopLocationOption[] = [];
+		if (stored === null) storage.setItem(POOP_LOCATION_OPTIONS_STORAGE_KEY, JSON.stringify(initialOptions));
+		return initialOptions;
+	} catch { return []; }
 }
 
 export function addPoopLocationOption(options: readonly PoopLocationOption[], input: string): PoopLocationMutationResult {
@@ -95,7 +84,6 @@ export function updatePoopLocationOption(options: readonly PoopLocationOption[],
 }
 
 export function deletePoopLocationOption(options: readonly PoopLocationOption[], id: string): PoopLocationMutationResult {
-	if (options.length <= 1) return { ok: false, options: [...options], error: '排泄場所は1件以上必要です。' };
 	if (!options.some((option) => option.id === id)) return { ok: false, options: [...options], error: '削除する選択肢が見つかりません。' };
 	const nextOptions = options.filter((option) => option.id !== id);
 	return saveOptions(nextOptions) ? { ok: true, options: nextOptions } : { ok: false, options: [...options], error: '選択肢を削除できませんでした。' };

@@ -46,7 +46,6 @@ export function PoopLocationSettings() {
 	}
 
 	function handleDeleteRequest(option: PoopLocationOption) {
-		if (options.length <= 1) { showFeedback('うんちをした場所は1件以上必要です。', true); return; }
 		setDeleteTarget(option);
 	}
 
@@ -68,7 +67,7 @@ export function PoopLocationSettings() {
 					<span className="text-sm tabular-nums text-slate-400">{options.length}件</span>
 				</div>
 
-				<div className="pc-card overflow-hidden">
+				{options.length > 0 ? <div className="pc-card overflow-hidden">
 					{options.map((option, index) => (
 						<div key={option.id} className={`flex min-h-16 items-center gap-3 px-4 sm:px-5 ${index < options.length - 1 ? 'border-b border-slate-100' : ''}`}>
 							<span className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-700">{option.label}</span>
@@ -76,7 +75,7 @@ export function PoopLocationSettings() {
 							<button type="button" onClick={() => handleDeleteRequest(option)} className="min-h-11 rounded-xl px-3 text-sm font-semibold text-danger-strong transition hover:bg-danger-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger-strong">削除</button>
 						</div>
 					))}
-				</div>
+				</div> : <div className="pc-card px-5 py-7 text-center"><p className="text-sm font-semibold text-slate-700">場所がまだ登録されていません</p><p className="mt-1.5 text-sm leading-relaxed text-slate-500">下のボタンから、よく使う場所を追加してください。</p></div>}
 
 				{editor ? (
 					<form onSubmit={handleSubmit} className="pc-card mt-4 p-4 sm:p-5">

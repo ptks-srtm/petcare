@@ -175,6 +175,19 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		setEditingTarget(target);
 	}
 
+	function handleRecorderToggle(kind: RecorderKind) {
+		const nextRecorder = activeRecorder === kind ? null : kind;
+		setActiveRecorder(nextRecorder);
+		if (!nextRecorder) return;
+
+		requestAnimationFrame(() => {
+			const formSection = formSectionRef.current;
+			if (!formSection) return;
+			const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			formSection.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+		});
+	}
+
 	function handleConfirmDelete() {
 		if (!deleteTarget) return;
 
@@ -207,9 +220,9 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const editKindLabel = editingTarget ? `${LOG_TYPE_META[editingTarget.kind].label}ログ` : '記録';
 
 	const recorderOptions = [
-		{ kind: 'poop' as const, label: 'うんちログ', description: '状態や場所を記録できます' },
-		{ kind: 'meal' as const, label: 'ごはんログ', description: '種類や食べた量を記録できます' },
 		{ kind: 'walk' as const, label: 'さんぽログ', description: '時間や様子を記録できます' },
+		{ kind: 'meal' as const, label: 'ごはんログ', description: '種類や食べた量を記録できます' },
+		{ kind: 'poop' as const, label: 'うんちログ', description: '状態や場所を記録できます' },
 	];
 
 	return (
@@ -226,7 +239,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 					{recorderOptions.map(({ kind, label, description }) => {
 						const isOpen = activeRecorder === kind;
 						return <div key={kind} className={`overflow-hidden rounded-2xl border transition ${isOpen ? 'border-brand-primary/45 bg-brand-subtle' : 'border-border-soft bg-white'}`}>
-							<button type="button" aria-expanded={isOpen} aria-controls={`recorder-${kind}`} onClick={() => setActiveRecorder((current) => current === kind ? null : kind)} className={`flex min-h-16 w-full items-center gap-3 px-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky ${isOpen ? 'text-brand-blue' : 'hover:bg-slate-50'}`}>
+							<button type="button" aria-expanded={isOpen} aria-controls={`recorder-${kind}`} onClick={() => handleRecorderToggle(kind)} className={`flex min-h-16 w-full items-center gap-3 px-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky ${isOpen ? 'text-brand-blue' : 'hover:bg-slate-50'}`}>
 								<span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-xl transition ${isOpen ? 'bg-white text-brand-primary ring-1 ring-brand-primary/25' : 'bg-brand-subtle text-brand-primary'}`}><LogTypeIcon kind={kind} size={23} /></span>
 								<span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${isOpen ? 'text-brand-blue' : 'text-slate-800'}`}>{label}</span><span className={`mt-0.5 block text-xs ${isOpen ? 'text-brand-blue/70' : 'text-slate-400'}`}>{description}</span></span>
 								<ChevronDown size={19} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-brand-blue' : 'text-slate-400'}`} />
@@ -241,7 +254,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 				{editingWalkLog && <WalkForm initialValues={editingWalkLog} isEditing onSubmit={handleSubmitWalkLog} onCancelEdit={() => setEditingTarget(null)} />}
 			</section>}
 
-			<Toast message={feedback?.message ?? null} isError={feedback?.isError} />
+			<Toast message={feedback?.message ?? null} isError={feedback?.isError} placement="inline" />
 
 			{hasLoaded && !isHistory && <HealthSummarySection section="weekly" today={todaySummary} weekly={weeklySummary} insight={healthInsight} />}
 

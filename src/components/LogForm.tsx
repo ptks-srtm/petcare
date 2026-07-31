@@ -38,6 +38,7 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 	const [coprophagia, setCoprophagia] = useState(false);
 	const [location, setLocation] = useState<string | null>(null);
 	const [locationOptions, setLocationOptions] = useState<PoopLocationOption[]>([]);
+	const [locationError, setLocationError] = useState<string | null>(null);
 	const [memo, setMemo] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const submitLock = useRef(false);
@@ -47,6 +48,7 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 		setCondition('normal');
 		setCoprophagia(false);
 		setLocation(null);
+		setLocationError(null);
 		setMemo('');
 	}
 
@@ -88,7 +90,11 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 
 	function handleSubmit(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
 		event.preventDefault();
-		if (!location || submitLock.current) return;
+		if (!location) {
+			setLocationError('うんちをした場所を選んでください。');
+			return;
+		}
+		if (submitLock.current) return;
 
 		submitLock.current = true;
 		setIsSubmitting(true);
@@ -169,9 +175,9 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 				</div>
 			</fieldset>
 
-			<fieldset>
+			<fieldset aria-invalid={Boolean(locationError)} aria-describedby={locationError ? 'location-error' : undefined}>
 				<legend className="mb-1.5 text-sm font-semibold text-slate-700">うんちをした場所</legend>
-				<div className="grid grid-cols-2 gap-2" role="group">
+				{displayedLocationOptions.length > 0 ? <div className="grid grid-cols-2 gap-2" role="group">
 					{displayedLocationOptions.map((item) => {
 						const isSelected = location === item.value || Boolean(isEditing && location && getPoopLocationDisplayLabel(location) === item.label);
 						return (
@@ -179,7 +185,10 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 							key={item.id}
 							type="button"
 							aria-pressed={isSelected}
-							onClick={() => setLocation(item.value)}
+							onClick={() => {
+								setLocation(item.value);
+								setLocationError(null);
+							}}
 							className={`min-h-12 rounded-xl border px-4 text-sm font-semibold transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky active:translate-y-px ${
 							isSelected
 									? 'pc-choice-selected'
@@ -190,7 +199,11 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 						</button>
 						);
 					})}
-				</div>
+				</div> : <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center"><p className="text-sm font-semibold text-slate-700">場所がまだ登録されていません</p><p className="mt-1 text-xs leading-relaxed text-slate-500">場所を追加すると、ここから選べるようになります。</p></div>}
+				{locationError && <p id="location-error" role="alert" className="mt-2 text-sm font-medium text-danger-strong">{locationError}</p>}
+				<a href="/settings/poop-locations" className="mt-2 inline-flex min-h-9 items-center rounded-lg px-1.5 text-xs font-semibold text-brand-blue transition hover:bg-brand-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky">
+					{displayedLocationOptions.length > 0 ? '場所を追加・編集' : '場所を追加する'}
+				</a>
 			</fieldset>
 
 			<div>
@@ -211,7 +224,7 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 			<div className="space-y-2.5">
 				<button
 					type="submit"
-					disabled={!location || isSubmitting}
+					disabled={isSubmitting}
 					className="pc-button-primary w-full px-5 text-base"
 				>
 					{isSubmitting ? '保存中…' : isEditing ? '更新する' : '記録する'}

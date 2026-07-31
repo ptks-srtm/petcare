@@ -147,6 +147,19 @@ textarea {
 	line-height: 1.25;
 }
 
+.datetime-input {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.datetime-input::-webkit-date-and-time-value {
+	min-width: 0;
+	text-align: left;
+}
+
 .datetime-input::-webkit-calendar-picker-indicator {
 	margin: 0;
 	padding: 0.25rem;
@@ -156,4 +169,10 @@ textarea {
 
 .datetime-input:focus::-webkit-calendar-picker-indicator {
 	opacity: 0.85;
+}
+
+@media (max-width: 640px) {
+	.datetime-input {
+		font-size: 1rem;
+	}
 }
