@@ -122,8 +122,8 @@ export function LogForm({ initialValues, isEditing, onSubmit, onCancelEdit }: Lo
 	];
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-4.5">
-			<div>
+		<form onSubmit={handleSubmit} className="min-w-0 max-w-full space-y-4.5">
+			<div className="min-w-0 max-w-full">
 				<label htmlFor="datetime" className="mb-1.5 block text-sm font-semibold text-slate-700">
 					日時
 				</label>

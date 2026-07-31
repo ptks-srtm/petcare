@@ -229,22 +229,22 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		<>
 			{!hasLoaded && <div aria-label="健康記録を読み込み中" className="space-y-5"><div className="pc-card pc-skeleton h-64 p-5" /><div className="pc-card pc-skeleton h-40 p-5" /></div>}
 
-			{hasLoaded && (!isHistory || isEditing) && <section ref={formSectionRef} tabIndex={-1} aria-labelledby="new-log-title" className="pc-card scroll-mt-4 p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand-sky">
+			{hasLoaded && (!isHistory || isEditing) && <section ref={formSectionRef} tabIndex={-1} aria-labelledby="new-log-title" className="pc-card min-w-0 max-w-full scroll-mt-4 p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand-sky">
 				<div className="mb-4">
 					<FormHeading id="new-log-title" className="text-xl font-semibold tracking-tight text-slate-800">{isEditing ? `${editKindLabel}の編集` : '今日の記録'}</FormHeading>
 					<p className="mt-1 text-sm leading-relaxed text-slate-500">{isEditing ? '内容を確認して更新できます' : '記録したい項目を選んでください'}</p>
 				</div>
 
-				{!isEditing && !isHistory && <div className="space-y-2.5">
+				{!isEditing && !isHistory && <div className="min-w-0 max-w-full space-y-2.5">
 					{recorderOptions.map(({ kind, label, description }) => {
 						const isOpen = activeRecorder === kind;
-						return <div key={kind} className={`overflow-hidden rounded-2xl border transition ${isOpen ? 'border-brand-primary/45 bg-brand-subtle' : 'border-border-soft bg-white'}`}>
+						return <div key={kind} className={`min-w-0 max-w-full overflow-hidden rounded-2xl border transition ${isOpen ? 'border-brand-primary/45 bg-brand-subtle' : 'border-border-soft bg-white'}`}>
 							<button type="button" aria-expanded={isOpen} aria-controls={`recorder-${kind}`} onClick={() => handleRecorderToggle(kind)} className={`flex min-h-16 w-full items-center gap-3 px-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky ${isOpen ? 'text-brand-blue' : 'hover:bg-slate-50'}`}>
 								<span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-xl transition ${isOpen ? 'bg-white text-brand-primary ring-1 ring-brand-primary/25' : 'bg-brand-subtle text-brand-primary'}`}><LogTypeIcon kind={kind} size={23} /></span>
 								<span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${isOpen ? 'text-brand-blue' : 'text-slate-800'}`}>{label}</span><span className={`mt-0.5 block text-xs ${isOpen ? 'text-brand-blue/70' : 'text-slate-400'}`}>{description}</span></span>
 								<ChevronDown size={19} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-brand-blue' : 'text-slate-400'}`} />
 							</button>
-							{isOpen && <div id={`recorder-${kind}`} className="border-t border-slate-100 px-4 pt-4 pb-5">{kind === 'poop' ? <LogForm isEditing={false} onSubmit={handleSubmitPoopLog} onCancelEdit={() => {}} /> : kind === 'meal' ? <MealForm isEditing={false} onSubmit={handleSubmitMealLog} onCancelEdit={() => {}} /> : <WalkForm isEditing={false} onSubmit={handleSubmitWalkLog} onCancelEdit={() => {}} />}</div>}
+							{isOpen && <div id={`recorder-${kind}`} className="min-w-0 max-w-full border-t border-slate-100 px-4 pt-4 pb-5">{kind === 'poop' ? <LogForm isEditing={false} onSubmit={handleSubmitPoopLog} onCancelEdit={() => {}} /> : kind === 'meal' ? <MealForm isEditing={false} onSubmit={handleSubmitMealLog} onCancelEdit={() => {}} /> : <WalkForm isEditing={false} onSubmit={handleSubmitWalkLog} onCancelEdit={() => {}} />}</div>}
 						</div>;
 					})}
 				</div>}

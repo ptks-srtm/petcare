@@ -148,16 +148,31 @@ textarea {
 }
 
 .datetime-input {
+	-webkit-appearance: none;
+	appearance: none;
 	display: block;
 	box-sizing: border-box;
 	width: 100%;
+	inline-size: 100%;
 	min-width: 0;
+	min-inline-size: 0;
 	max-width: 100%;
+	max-inline-size: 100%;
 }
 
 .datetime-input::-webkit-date-and-time-value {
+	display: block;
+	width: 100%;
 	min-width: 0;
+	max-width: 100%;
+	margin: 0;
 	text-align: left;
+}
+
+.datetime-input::-webkit-datetime-edit {
+	min-width: 0;
+	max-width: 100%;
+	padding: 0;
 }
 
 .datetime-input::-webkit-calendar-picker-indicator {

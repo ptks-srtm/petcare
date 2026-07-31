@@ -64,8 +64,8 @@ export function WalkForm({ initialValues, isEditing, onSubmit, onCancelEdit }: W
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-4.5">
-			<div>
+		<form onSubmit={handleSubmit} className="min-w-0 max-w-full space-y-4.5">
+			<div className="min-w-0 max-w-full">
 				<label htmlFor="walk-datetime" className="mb-1.5 block text-sm font-semibold text-slate-700">開始日時</label>
 				<input id="walk-datetime" type="datetime-local" required value={datetime} onChange={(event) => setDatetime(event.target.value)} className="datetime-input h-10 w-full rounded-xl border border-slate-200 bg-white py-2 pr-2.5 pl-3.5 text-sm text-slate-800 outline-none transition focus:border-brand-sky focus:ring-3 focus:ring-brand-mint/20" />
 			</div>
