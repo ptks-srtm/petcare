@@ -5,11 +5,13 @@ import { isValidPoopLocationOptionList, loadPoopLocationOptions, POOP_LOCATION_O
 import { isPoopLog, loadPoopLogs, POOP_LOG_STORAGE_KEY } from './storage';
 import { isWalkLog, loadWalkLogs, WALK_LOG_STORAGE_KEY } from './walkStorage';
 import { HOSPITAL_LOG_STORAGE_KEY, isHospitalLog, loadHospitalLogs } from './hospitalStorage';
+import { isWeightLog, loadWeightLogs, WEIGHT_LOG_STORAGE_KEY } from './weightStorage';
 
-export const BACKUP_VERSION = '1.1.0';
+export const BACKUP_VERSION = '1.2.0';
 const LEGACY_BACKUP_VERSIONS = new Set(['0.13.0', '0.14.0', '0.15.0', '1.0.0']);
-const HOSPITAL_LOG_BACKUP_VERSIONS = new Set([BACKUP_VERSION]);
-const SUPPORTED_BACKUP_VERSIONS = new Set([...LEGACY_BACKUP_VERSIONS, ...HOSPITAL_LOG_BACKUP_VERSIONS]);
+const HOSPITAL_LOG_BACKUP_VERSIONS = new Set(['1.1.0', BACKUP_VERSION]);
+const WEIGHT_LOG_BACKUP_VERSIONS = new Set([BACKUP_VERSION]);
+const SUPPORTED_BACKUP_VERSIONS = new Set([...LEGACY_BACKUP_VERSIONS, ...HOSPITAL_LOG_BACKUP_VERSIONS, ...WEIGHT_LOG_BACKUP_VERSIONS]);
 export const PETCARE_DATA_CHANGED_EVENT = 'petcare:data-changed';
 
 export const PERSISTED_STORAGE_KEYS = [
@@ -18,6 +20,7 @@ export const PERSISTED_STORAGE_KEYS = [
 	MEAL_LOG_STORAGE_KEY,
 	WALK_LOG_STORAGE_KEY,
 	HOSPITAL_LOG_STORAGE_KEY,
+	WEIGHT_LOG_STORAGE_KEY,
 	POOP_LOCATION_OPTIONS_STORAGE_KEY,
 ] as const;
 
@@ -40,6 +43,7 @@ export function createPetCareBackup(): PetCareBackup {
 			mealLogs: loadMealLogs(),
 			walkLogs: loadWalkLogs(),
 			hospitalLogs: loadHospitalLogs(),
+			weightLogs: loadWeightLogs(),
 			poopLocationOptions: loadPoopLocationOptions(),
 		},
 	};
@@ -59,8 +63,12 @@ export function parsePetCareBackup(input: string): PetCareBackup | null {
 		if (HOSPITAL_LOG_BACKUP_VERSIONS.has(parsed.version) && !hasHospitalLogs) return null;
 		const hospitalLogs = hasHospitalLogs ? data.hospitalLogs : [];
 		if (!Array.isArray(hospitalLogs) || !hospitalLogs.every(isHospitalLog)) return null;
+		const hasWeightLogs = Object.hasOwn(data, 'weightLogs');
+		if (WEIGHT_LOG_BACKUP_VERSIONS.has(parsed.version) && !hasWeightLogs) return null;
+		const weightLogs = hasWeightLogs ? data.weightLogs : [];
+		if (!Array.isArray(weightLogs) || !weightLogs.every(isWeightLog)) return null;
 		if (!isValidPoopLocationOptionList(data.poopLocationOptions)) return null;
-		return { ...parsed, data: { ...data, hospitalLogs } } as PetCareBackup;
+		return { ...parsed, data: { ...data, hospitalLogs, weightLogs } } as PetCareBackup;
 	} catch {
 		return null;
 	}
@@ -77,6 +85,7 @@ export function restorePetCareBackup(backup: PetCareBackup): boolean {
 		storage.setItem(MEAL_LOG_STORAGE_KEY, JSON.stringify(backup.data.mealLogs));
 		storage.setItem(WALK_LOG_STORAGE_KEY, JSON.stringify(backup.data.walkLogs));
 		storage.setItem(HOSPITAL_LOG_STORAGE_KEY, JSON.stringify(backup.data.hospitalLogs));
+		storage.setItem(WEIGHT_LOG_STORAGE_KEY, JSON.stringify(backup.data.weightLogs));
 		storage.setItem(POOP_LOCATION_OPTIONS_STORAGE_KEY, JSON.stringify(backup.data.poopLocationOptions));
 		window.dispatchEvent(new Event(PETCARE_DATA_CHANGED_EVENT));
 		window.dispatchEvent(new Event(POOP_LOCATION_OPTIONS_CHANGED_EVENT));

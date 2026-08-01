@@ -4,6 +4,7 @@ import type { NewPoopLog, PoopLog } from '../types/log';
 import type { MealLog, NewMealLog } from '../types/meal';
 import type { NewWalkLog, WalkLog } from '../types/walk';
 import type { HospitalLog, NewHospitalLog } from '../types/hospital';
+import type { NewWeightLog, WeightLog } from '../types/weight';
 import { combineHealthLogs, type HealthLogKind, type HealthLogTarget } from '../utils/healthLog';
 import { getHealthInsight, getLast7DaysSummary, getTodaySummary } from '../utils/healthSummary';
 import { sortLogsNewestFirst } from '../utils/logDate';
@@ -12,6 +13,7 @@ import { deleteMealLog, loadMealLogs, saveMealLogs, updateMealLog } from '../uti
 import { deletePoopLog, loadPoopLogs, savePoopLogs, updatePoopLog } from '../utils/storage';
 import { deleteWalkLog, loadWalkLogs, saveWalkLogs, updateWalkLog } from '../utils/walkStorage';
 import { deleteHospitalLog, loadHospitalLogs, saveHospitalLogs, updateHospitalLog } from '../utils/hospitalStorage';
+import { deleteWeightLog, loadWeightLogs, saveWeightLogs, updateWeightLog } from '../utils/weightStorage';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { HealthSummarySection } from './HealthSummarySection';
@@ -22,6 +24,7 @@ import { MealForm } from './MealForm';
 import { Toast } from './Toast';
 import { WalkForm } from './WalkForm';
 import { HospitalForm } from './HospitalForm';
+import { WeightForm } from './WeightForm';
 
 type Feedback = { message: string; isError?: boolean } | null;
 type RecorderKind = HealthLogKind;
@@ -48,6 +51,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
 	const [walkLogs, setWalkLogs] = useState<WalkLog[]>([]);
 	const [hospitalLogs, setHospitalLogs] = useState<HospitalLog[]>([]);
+	const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
 	const [activeRecorder, setActiveRecorder] = useState<RecorderKind | null>(null);
 	const [isCareRecordsOpen, setIsCareRecordsOpen] = useState(false);
 	const [feedback, setFeedback] = useState<Feedback>(null);
@@ -60,13 +64,15 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const editingMealLog = editingTarget?.kind === 'meal' ? mealLogs.find((log) => log.id === editingTarget.id) : undefined;
 	const editingWalkLog = editingTarget?.kind === 'walk' ? walkLogs.find((log) => log.id === editingTarget.id) : undefined;
 	const editingHospitalLog = editingTarget?.kind === 'hospital' ? hospitalLogs.find((log) => log.id === editingTarget.id) : undefined;
-	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog || editingHospitalLog);
+	const editingWeightLog = editingTarget?.kind === 'weight' ? weightLogs.find((log) => log.id === editingTarget.id) : undefined;
+	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog || editingHospitalLog || editingWeightLog);
 
 	useEffect(() => {
 		setPoopLogs(sortLogsNewestFirst(loadPoopLogs()));
 		setMealLogs(sortLogsNewestFirst(loadMealLogs()));
 		setWalkLogs(sortLogsNewestFirst(loadWalkLogs()));
 		setHospitalLogs(sortLogsNewestFirst(loadHospitalLogs()));
+		setWeightLogs(sortLogsNewestFirst(loadWeightLogs()));
 		setHasLoaded(true);
 		const params = new URLSearchParams(window.location.search);
 		if (params.get('dataReset') === '1') {
@@ -204,16 +210,43 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		return true;
 	}
 
+	function handleSubmitWeightLog(input: NewWeightLog) {
+		if (editingTarget?.kind === 'weight') {
+			const updatedLogs = updateWeightLog(weightLogs, { ...input, id: editingTarget.id });
+			if (!updatedLogs) {
+				showFeedback('保存できませんでした', true);
+				return false;
+			}
+			setWeightLogs(sortLogsNewestFirst(updatedLogs));
+			notifyLogsChanged();
+			setEditingTarget(null);
+			showFeedback('更新しました');
+			return true;
+		}
+
+		const nextLog: WeightLog = { ...input, id: createId() };
+		const nextLogs = sortLogsNewestFirst([nextLog, ...weightLogs]);
+		if (!saveWeightLogs(nextLogs)) {
+			showFeedback('保存できませんでした', true);
+			return false;
+		}
+		setWeightLogs(nextLogs);
+		notifyLogsChanged();
+		setActiveRecorder(null);
+		showFeedback('記録しました');
+		return true;
+	}
+
 	function handleStartEdit(target: HealthLogTarget) {
 		setActiveRecorder(null);
-		if (target.kind === 'hospital') setIsCareRecordsOpen(true);
+		if (target.kind === 'hospital' || target.kind === 'weight') setIsCareRecordsOpen(true);
 		setEditingTarget(target);
 	}
 
 	function handleCareRecordsToggle() {
 		const nextIsOpen = !isCareRecordsOpen;
 		setIsCareRecordsOpen(nextIsOpen);
-		if (!nextIsOpen && activeRecorder === 'hospital') setActiveRecorder(null);
+		if (!nextIsOpen && (activeRecorder === 'hospital' || activeRecorder === 'weight')) setActiveRecorder(null);
 	}
 
 	function handleRecorderToggle(kind: RecorderKind) {
@@ -238,7 +271,9 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 				? deleteMealLog(mealLogs, deleteTarget.id)
 				: deleteTarget.kind === 'walk'
 					? deleteWalkLog(walkLogs, deleteTarget.id)
-					: deleteHospitalLog(hospitalLogs, deleteTarget.id);
+					: deleteTarget.kind === 'hospital'
+						? deleteHospitalLog(hospitalLogs, deleteTarget.id)
+						: deleteWeightLog(weightLogs, deleteTarget.id);
 		if (!nextLogs) {
 			showFeedback('削除できませんでした', true);
 			return;
@@ -247,7 +282,8 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		if (deleteTarget.kind === 'poop') setPoopLogs(sortLogsNewestFirst(nextLogs as PoopLog[]));
 		else if (deleteTarget.kind === 'meal') setMealLogs(sortLogsNewestFirst(nextLogs as MealLog[]));
 		else if (deleteTarget.kind === 'walk') setWalkLogs(sortLogsNewestFirst(nextLogs as WalkLog[]));
-		else setHospitalLogs(sortLogsNewestFirst(nextLogs as HospitalLog[]));
+		else if (deleteTarget.kind === 'hospital') setHospitalLogs(sortLogsNewestFirst(nextLogs as HospitalLog[]));
+		else setWeightLogs(sortLogsNewestFirst(nextLogs as WeightLog[]));
 		notifyLogsChanged();
 		if (isSameTarget(editingTarget, deleteTarget)) setEditingTarget(null);
 		setDeleteTarget(null);
@@ -255,7 +291,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	}
 
 	const isHistory = view === 'history';
-	const combinedLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs, hospitalLogs);
+	const combinedLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs, hospitalLogs, weightLogs);
 	const visibleLogs = isHistory ? combinedLogs : combinedLogs.slice(0, 5);
 	const todaySummary = getTodaySummary(poopLogs, mealLogs, walkLogs);
 	const weeklySummary = getLast7DaysSummary(poopLogs, mealLogs, walkLogs);
@@ -278,6 +314,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 			label: 'ケアの記録',
 			options: [
 				{ kind: 'hospital' as const, label: '病院ログ', description: '受診内容や費用を記録できます' },
+				{ kind: 'weight' as const, label: '体重ログ', description: '体重と測定時の様子を記録できます' },
 			],
 		},
 	];
@@ -306,7 +343,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 									<span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${isOpen ? 'text-brand-blue' : 'text-slate-800'}`}>{label}</span><span className={`mt-0.5 block text-xs ${isOpen ? 'text-brand-blue/70' : 'text-slate-400'}`}>{description}</span></span>
 									<ChevronDown size={19} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-brand-blue' : 'text-slate-400'}`} />
 								</button>
-								{isOpen && <div id={`recorder-${kind}`} className="min-w-0 max-w-full border-t border-slate-100 px-4 pt-4 pb-5">{kind === 'poop' ? <LogForm isEditing={false} onSubmit={handleSubmitPoopLog} onCancelEdit={() => {}} /> : kind === 'meal' ? <MealForm isEditing={false} onSubmit={handleSubmitMealLog} onCancelEdit={() => {}} /> : kind === 'walk' ? <WalkForm isEditing={false} onSubmit={handleSubmitWalkLog} onCancelEdit={() => {}} /> : <HospitalForm isEditing={false} onSubmit={handleSubmitHospitalLog} onCancelEdit={() => {}} />}</div>}
+								{isOpen && <div id={`recorder-${kind}`} className="min-w-0 max-w-full border-t border-slate-100 px-4 pt-4 pb-5">{kind === 'poop' ? <LogForm isEditing={false} onSubmit={handleSubmitPoopLog} onCancelEdit={() => {}} /> : kind === 'meal' ? <MealForm isEditing={false} onSubmit={handleSubmitMealLog} onCancelEdit={() => {}} /> : kind === 'walk' ? <WalkForm isEditing={false} onSubmit={handleSubmitWalkLog} onCancelEdit={() => {}} /> : kind === 'hospital' ? <HospitalForm isEditing={false} onSubmit={handleSubmitHospitalLog} onCancelEdit={() => {}} /> : <WeightForm isEditing={false} onSubmit={handleSubmitWeightLog} onCancelEdit={() => {}} />}</div>}
 							</div>;
 							})}</div>}
 						</section>;
@@ -317,6 +354,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 				{editingMealLog && <MealForm initialValues={editingMealLog} isEditing onSubmit={handleSubmitMealLog} onCancelEdit={() => setEditingTarget(null)} />}
 				{editingWalkLog && <WalkForm initialValues={editingWalkLog} isEditing onSubmit={handleSubmitWalkLog} onCancelEdit={() => setEditingTarget(null)} />}
 				{editingHospitalLog && <HospitalForm initialValues={editingHospitalLog} isEditing onSubmit={handleSubmitHospitalLog} onCancelEdit={() => setEditingTarget(null)} />}
+				{editingWeightLog && <WeightForm initialValues={editingWeightLog} isEditing onSubmit={handleSubmitWeightLog} onCancelEdit={() => setEditingTarget(null)} />}
 			</section>}
 
 			<Toast message={feedback?.message ?? null} isError={feedback?.isError} placement="inline" />

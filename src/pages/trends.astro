@@ -5,10 +5,10 @@ import { TrendsApp } from '../components/TrendsApp';
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="傾向 | PetCare" description="うんち・ごはん・さんぽの直近7日間の傾向を確認できます。">
+<Layout title="傾向 | PetCare" description="体重、さんぽ、ごはん、うんち、病院の記録を7日・30日・90日で振り返れます。">
 	<AppHeader />
 	<main class="mx-auto max-w-xl px-4 py-6 sm:px-5 sm:py-8">
-		<PageHeader backHref="/" backLabel="ホームへ戻る" title="傾向" description="直近7日間の記録を日ごとに振り返れます" />
+		<PageHeader backHref="/" backLabel="ホームへ戻る" title="傾向" description="最近の記録を期間ごとに振り返れます" />
 		<TrendsApp client:load />
 	</main>
 </Layout>

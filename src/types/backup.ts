@@ -4,6 +4,7 @@ import type { PetProfile } from './profile';
 import type { PoopLocationOption } from './poopLocation';
 import type { WalkLog } from './walk';
 import type { HospitalLog } from './hospital';
+import type { WeightLog } from './weight';
 
 export type PetCareBackupData = {
 	profile: PetProfile | null;
@@ -11,6 +12,7 @@ export type PetCareBackupData = {
 	mealLogs: MealLog[];
 	walkLogs: WalkLog[];
 	hospitalLogs: HospitalLog[];
+	weightLogs: WeightLog[];
 	poopLocationOptions: PoopLocationOption[];
 };
 

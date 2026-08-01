@@ -41,6 +41,11 @@ function LogDetails({ entry }: { entry: HealthLogEntry }) {
 		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="walk" className="text-brand-primary" /><span className="font-semibold text-slate-800">{entry.log.durationMinutes}分</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
 	}
 
+	if (entry.kind === 'weight') {
+		const formattedWeight = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 }).format(entry.log.weightKg);
+		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="weight" className="text-brand-primary" /><span className="font-semibold tabular-nums text-slate-800">{formattedWeight}kg</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	}
+
 	const title = entry.log.hospitalName || entry.log.reason || '病院の記録';
 	const formattedCost = entry.log.costYen === undefined ? null : `${new Intl.NumberFormat('ja-JP').format(entry.log.costYen)}円`;
 	const formattedNextVisit = entry.log.nextVisitDate

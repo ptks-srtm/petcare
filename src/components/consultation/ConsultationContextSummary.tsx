@@ -15,7 +15,8 @@ function logDescription(entry: HealthLogEntry) {
 	if (entry.kind === 'poop') return `${conditionLabels[entry.log.condition]}・${getPoopLocationDisplayLabel(entry.log.location)}${entry.log.coprophagia ? '・食糞あり' : ''}`;
 	if (entry.kind === 'meal') return intakeLabels[entry.log.intake];
 	if (entry.kind === 'walk') return `${entry.log.durationMinutes}分`;
-	return entry.log.hospitalName || entry.log.reason || '病院の記録';
+	if (entry.kind === 'hospital') return entry.log.hospitalName || entry.log.reason || '病院の記録';
+	return `${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 }).format(entry.log.weightKg)}kg`;
 }
 
 export function ConsultationContextSummary({ request }: { request: PetConsultationRequest }) {

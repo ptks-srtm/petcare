@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Hospital } from 'lucide-react';
+import { Hospital, Scale } from 'lucide-react';
 import type { LogType } from '../utils/logTypeMeta';
 import mealIconSource from '../assets/icons/meal.svg?raw';
 import pawIconSource from '../assets/icons/paw.svg?raw';
@@ -26,6 +26,7 @@ export function LogTypeIcon({ kind, size = 20, className }: LogTypeIconProps) {
 	if (kind === 'poop') return <svg {...commonProps} viewBox="0 0 512 512">{poopPaths.map((path, index) => <path key={index} d={path} fill="currentColor" />)}</svg>;
 	if (kind === 'meal') return <svg {...commonProps} viewBox="0 52 512 400">{mealPaths.map((path, index) => <path key={index} d={path} fill="currentColor" />)}</svg>;
 	if (kind === 'hospital') return <Hospital {...commonProps} strokeWidth={2} />;
+	if (kind === 'weight') return <Scale {...commonProps} strokeWidth={2} />;
 
 	return <svg {...commonProps} viewBox="0 0 1000 1000"><defs><g id={pawSymbolId}>{pawPaths.map((path, index) => <path key={index} d={path} fill="currentColor" />)}</g></defs><use href={`#${pawSymbolId}`} transform="translate(20 470) scale(.88) rotate(-8 256 256)" /><use href={`#${pawSymbolId}`} transform="translate(510 20) scale(.84) rotate(8 256 256)" /></svg>;
 }

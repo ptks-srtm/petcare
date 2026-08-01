@@ -1,6 +1,8 @@
 import type { PoopLog } from '../types/log';
 import type { MealLog } from '../types/meal';
 import type { WalkLog } from '../types/walk';
+import type { WeightLog } from '../types/weight';
+import type { HospitalLog } from '../types/hospital';
 import { getLocalDayRange, isWithinRange, startOfLocalDay } from './healthSummary';
 import { toLocalDateKey } from './logDate';
 
@@ -44,10 +46,185 @@ export type WeeklyHealthTrends = {
 	walk: WeeklyWalkTrend;
 };
 
+export type TrendPeriodDays = 7 | 30 | 90;
+
+export type TrendChartPoint = {
+	date: string;
+	ariaLabel: string;
+	value: number | null;
+};
+
+export type PeriodHealthTrends = {
+	periodDays: TrendPeriodDays;
+	periodLabel: string;
+	totalRecords: number;
+	weight: {
+		count: number;
+		latest: WeightLog | null;
+		previous: WeightLog | null;
+		differenceKg: number | null;
+		averageKg: number | null;
+		daily: TrendChartPoint[];
+	};
+	walk: {
+		count: number;
+		totalMinutes: number;
+		averageMinutesPerWalk: number | null;
+		averageWalksPerDay: number;
+		daily: TrendChartPoint[];
+	};
+	meal: {
+		total: number;
+		averagePerDay: number;
+		allCount: number;
+		mostCount: number;
+		halfCount: number;
+		littleCount: number;
+		noneCount: number;
+		allOrMostPercentage: number | null;
+		mostCommonIntakes: MealLog['intake'][];
+	};
+	poop: {
+		total: number;
+		averagePerDay: number;
+		normalCount: number;
+		softCount: number;
+		hardCount: number;
+		coprophagiaCount: number;
+		normalPercentage: number | null;
+		softPercentage: number | null;
+		hardPercentage: number | null;
+	};
+	hospital: {
+		latest: HospitalLog | null;
+		count: number;
+		costTotalYen: number;
+		costRecordedCount: number;
+	};
+};
+
 function formatPeriodLabel(start: Date, end: Date) {
 	const crossesYear = start.getFullYear() !== end.getFullYear();
 	const format = (date: Date) => `${crossesYear ? `${date.getFullYear()}年` : ''}${date.getMonth() + 1}月${date.getDate()}日`;
 	return `${format(start)}〜${format(end)}`;
+}
+
+function createPeriodPoints(referenceDate: Date, days: TrendPeriodDays): TrendChartPoint[] {
+	const firstDay = startOfLocalDay(referenceDate);
+	firstDay.setDate(firstDay.getDate() - (days - 1));
+	return Array.from({ length: days }, (_, index) => {
+		const date = new Date(firstDay);
+		date.setDate(firstDay.getDate() + index);
+		return {
+			date: toLocalDateKey(date),
+			ariaLabel: new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(date),
+			value: null,
+		};
+	});
+}
+
+function percentage(count: number, total: number) {
+	return total === 0 ? null : Math.round((count / total) * 100);
+}
+
+export function getPeriodHealthTrends(
+	poopLogs: readonly PoopLog[],
+	mealLogs: readonly MealLog[],
+	walkLogs: readonly WalkLog[],
+	weightLogs: readonly WeightLog[],
+	hospitalLogs: readonly HospitalLog[],
+	periodDays: TrendPeriodDays,
+	referenceDate = new Date(),
+): PeriodHealthTrends {
+	const { start, end } = getLocalDayRange(referenceDate, periodDays);
+	const periodEnd = startOfLocalDay(referenceDate);
+	const recentPoop = poopLogs.filter((log) => isWithinRange(log.datetime, start, end));
+	const recentMeal = mealLogs.filter((log) => isWithinRange(log.datetime, start, end));
+	const recentWalk = walkLogs.filter((log) => isWithinRange(log.datetime, start, end));
+	const recentWeight = weightLogs.filter((log) => isWithinRange(log.datetime, start, end));
+	const recentHospital = hospitalLogs.filter((log) => isWithinRange(log.datetime, start, end));
+
+	const weightByDay = new Map<string, WeightLog>();
+	for (const log of recentWeight) {
+		const key = toLocalDateKey(new Date(log.datetime));
+		const current = weightByDay.get(key);
+		if (!current || new Date(log.datetime).getTime() > new Date(current.datetime).getTime()) weightByDay.set(key, log);
+	}
+	const weightPoints = createPeriodPoints(referenceDate, periodDays).map((point) => ({ ...point, value: weightByDay.get(point.date)?.weightKg ?? null }));
+	const dailyWeights = Array.from(weightByDay.values());
+	const sortedAllWeights = [...weightLogs].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+	const latestWeight = [...recentWeight].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())[0] ?? null;
+	const latestWeightIndex = latestWeight ? sortedAllWeights.findIndex((log) => log.id === latestWeight.id) : -1;
+	const previousWeight = latestWeightIndex >= 0 ? sortedAllWeights[latestWeightIndex + 1] ?? null : null;
+
+	const walkMinutesByDay = new Map<string, number>();
+	for (const log of recentWalk) {
+		const key = toLocalDateKey(new Date(log.datetime));
+		walkMinutesByDay.set(key, (walkMinutesByDay.get(key) ?? 0) + log.durationMinutes);
+	}
+	const walkPoints = createPeriodPoints(referenceDate, periodDays).map((point) => ({ ...point, value: walkMinutesByDay.get(point.date) ?? 0 }));
+	const walkMinutes = recentWalk.reduce((total, log) => total + log.durationMinutes, 0);
+
+	const mealCounts: Record<MealLog['intake'], number> = { all: 0, most: 0, half: 0, little: 0, none: 0 };
+	recentMeal.forEach((log) => { mealCounts[log.intake] += 1; });
+	const intakeOrder: MealLog['intake'][] = ['all', 'most', 'half', 'little', 'none'];
+	const maximumIntakeCount = Math.max(...intakeOrder.map((intake) => mealCounts[intake]));
+	const mostCommonIntakes = maximumIntakeCount === 0 ? [] : intakeOrder.filter((intake) => mealCounts[intake] === maximumIntakeCount);
+
+	const normalCount = recentPoop.filter((log) => log.condition === 'normal').length;
+	const softCount = recentPoop.filter((log) => log.condition === 'soft').length;
+	const hardCount = recentPoop.filter((log) => log.condition === 'hard').length;
+	const costRecordedLogs = recentHospital.filter((log) => log.costYen !== undefined);
+	const latestHospital = [...hospitalLogs].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())[0] ?? null;
+
+	return {
+		periodDays,
+		periodLabel: formatPeriodLabel(start, periodEnd),
+		totalRecords: recentPoop.length + recentMeal.length + recentWalk.length + recentWeight.length + recentHospital.length,
+		weight: {
+			count: recentWeight.length,
+			latest: latestWeight,
+			previous: previousWeight,
+			differenceKg: latestWeight && previousWeight ? Math.round((latestWeight.weightKg - previousWeight.weightKg) * 100) / 100 : null,
+			averageKg: dailyWeights.length ? dailyWeights.reduce((total, log) => total + log.weightKg, 0) / dailyWeights.length : null,
+			daily: weightPoints,
+		},
+		walk: {
+			count: recentWalk.length,
+			totalMinutes: walkMinutes,
+			averageMinutesPerWalk: recentWalk.length ? walkMinutes / recentWalk.length : null,
+			averageWalksPerDay: recentWalk.length / periodDays,
+			daily: walkPoints,
+		},
+		meal: {
+			total: recentMeal.length,
+			averagePerDay: recentMeal.length / periodDays,
+			allCount: mealCounts.all,
+			mostCount: mealCounts.most,
+			halfCount: mealCounts.half,
+			littleCount: mealCounts.little,
+			noneCount: mealCounts.none,
+			allOrMostPercentage: percentage(mealCounts.all + mealCounts.most, recentMeal.length),
+			mostCommonIntakes,
+		},
+		poop: {
+			total: recentPoop.length,
+			averagePerDay: recentPoop.length / periodDays,
+			normalCount,
+			softCount,
+			hardCount,
+			coprophagiaCount: recentPoop.filter((log) => log.coprophagia).length,
+			normalPercentage: percentage(normalCount, recentPoop.length),
+			softPercentage: percentage(softCount, recentPoop.length),
+			hardPercentage: percentage(hardCount, recentPoop.length),
+		},
+		hospital: {
+			latest: latestHospital,
+			count: recentHospital.length,
+			costTotalYen: costRecordedLogs.reduce((total, log) => total + (log.costYen ?? 0), 0),
+			costRecordedCount: costRecordedLogs.length,
+		},
+	};
 }
 
 function createDailyPoints(referenceDate: Date): DailyTrendPoint[] {
