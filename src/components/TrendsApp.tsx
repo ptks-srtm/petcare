@@ -1,29 +1,19 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { HospitalLog } from '../types/hospital';
 import type { MealLog } from '../types/meal';
-import type { PoopLog } from '../types/log';
-import type { WalkLog } from '../types/walk';
-import type { WeightLog } from '../types/weight';
-import { getPeriodHealthTrends, type PeriodHealthTrends, type TrendPeriodDays } from '../utils/healthTrends';
+import { getPeriodHealthTrendComparison, type PeriodHealthTrends, type TrendLogCollections, type TrendPeriodDays } from '../utils/healthTrends';
 import { startOfLocalDay } from '../utils/healthSummary';
 import { loadHospitalLogs } from '../utils/hospitalStorage';
 import { loadMealLogs } from '../utils/mealStorage';
 import { loadPoopLogs } from '../utils/storage';
 import { loadWalkLogs } from '../utils/walkStorage';
 import { loadWeightLogs } from '../utils/weightStorage';
+import { evaluateTrendInsights } from '../utils/trendInsights';
 import type { LogType } from '../utils/logTypeMeta';
 import { EmptyState } from './EmptyState';
 import { LogTypeIcon } from './LogTypeIcon';
 import { TrendPeriodSelector } from './TrendPeriodSelector';
+import { TrendInsights } from './TrendInsights';
 import { TrendSparkline } from './TrendSparkline';
-
-type TrendLogs = {
-	poop: PoopLog[];
-	meal: MealLog[];
-	walk: WalkLog[];
-	weight: WeightLog[];
-	hospital: HospitalLog[];
-};
 
 const intakeLabels: Record<MealLog['intake'], string> = { all: '完食', most: 'ほぼ完食', half: '半分くらい', little: '少しだけ', none: '食べなかった' };
 
@@ -101,13 +91,17 @@ function HospitalCard({ trends }: { trends: PeriodHealthTrends }) {
 
 export function TrendsApp() {
 	const [periodDays, setPeriodDays] = useState<TrendPeriodDays>(7);
-	const [logs, setLogs] = useState<TrendLogs | null>(null);
+	const [logs, setLogs] = useState<TrendLogCollections | null>(null);
 
 	useEffect(() => {
 		setLogs({ poop: loadPoopLogs(), meal: loadMealLogs(), walk: loadWalkLogs(), weight: loadWeightLogs(), hospital: loadHospitalLogs() });
 	}, []);
 
-	const trends = useMemo(() => logs ? getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, periodDays) : null, [logs, periodDays]);
+	const comparison = useMemo(() => logs ? getPeriodHealthTrendComparison(logs, periodDays) : null, [logs, periodDays]);
+	const trends = comparison?.current ?? null;
+	const insightEvaluation = useMemo(() => comparison
+		? evaluateTrendInsights({ periodDays, current: comparison.current, previous: comparison.previous })
+		: { insights: [], hasSufficientData: false }, [comparison, periodDays]);
 
 	if (!trends) return <div className="space-y-5" aria-label="傾向を読み込み中"><div className="pc-skeleton h-14 rounded-2xl bg-slate-100" /><div className="pc-card pc-skeleton h-64 p-5" /><div className="pc-card pc-skeleton h-64 p-5" /></div>;
 
@@ -116,5 +110,6 @@ export function TrendsApp() {
 		<TrendPeriodSelector value={periodDays} onChange={setPeriodDays} />
 		<div className="my-5 rounded-2xl border border-border-soft bg-brand-subtle px-4 py-3 text-center"><p className="text-xs font-medium text-text-secondary">対象期間</p><p className="mt-0.5 text-base font-semibold tabular-nums text-text-primary">{trends.periodLabel}</p></div>
 		{trends.totalRecords === 0 ? <><EmptyState title="この期間の記録はありません" description="毎日の記録を追加すると、傾向を確認できます。" action={<a href="/" className="pc-button-primary px-5 text-sm">記録する</a>} />{keepHospitalCard && <div className="mt-5"><HospitalCard trends={trends} /></div>}</> : <div className="space-y-5"><WeightCard trends={trends} /><WalkCard trends={trends} /><MealCard trends={trends} /><PoopCard trends={trends} /><HospitalCard trends={trends} /></div>}
+		<div className="mt-5"><TrendInsights evaluation={insightEvaluation} /></div>
 	</>;
 }

@@ -5,6 +5,9 @@ import type { WeightLog } from '../types/weight';
 import type { HospitalLog } from '../types/hospital';
 import { getLocalDayRange, isWithinRange, startOfLocalDay } from './healthSummary';
 import { toLocalDateKey } from './logDate';
+import { getTrendComparisonPeriods } from './trendInsights';
+
+export { getTrendComparisonPeriods } from './trendInsights';
 
 export type DailyTrendPoint = {
 	date: string;
@@ -47,6 +50,19 @@ export type WeeklyHealthTrends = {
 };
 
 export type TrendPeriodDays = 7 | 30 | 90;
+
+export type TrendLogCollections = {
+	poop: readonly PoopLog[];
+	meal: readonly MealLog[];
+	walk: readonly WalkLog[];
+	weight: readonly WeightLog[];
+	hospital: readonly HospitalLog[];
+};
+
+export type TrendComparisonPeriods = {
+	current: { start: Date; end: Date };
+	previous: { start: Date; end: Date };
+};
 
 export type TrendChartPoint = {
 	date: string;
@@ -101,6 +117,12 @@ export type PeriodHealthTrends = {
 		costTotalYen: number;
 		costRecordedCount: number;
 	};
+};
+
+export type PeriodHealthTrendComparison = {
+	current: PeriodHealthTrends;
+	previous: PeriodHealthTrends;
+	periods: TrendComparisonPeriods;
 };
 
 function formatPeriodLabel(start: Date, end: Date) {
@@ -224,6 +246,22 @@ export function getPeriodHealthTrends(
 			costTotalYen: costRecordedLogs.reduce((total, log) => total + (log.costYen ?? 0), 0),
 			costRecordedCount: costRecordedLogs.length,
 		},
+	};
+}
+
+export function getPeriodHealthTrendComparison(
+	logs: TrendLogCollections,
+	periodDays: TrendPeriodDays,
+	referenceDate = new Date(),
+): PeriodHealthTrendComparison {
+	const periods = getTrendComparisonPeriods(periodDays, referenceDate);
+	const previousReferenceDate = new Date(periods.previous.end);
+	previousReferenceDate.setDate(previousReferenceDate.getDate() - 1);
+
+	return {
+		current: getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, periodDays, referenceDate),
+		previous: getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, periodDays, previousReferenceDate),
+		periods,
 	};
 }
 
