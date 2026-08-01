@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { NewPoopLog, PoopLog } from '../types/log';
 import type { MealLog, NewMealLog } from '../types/meal';
 import type { NewWalkLog, WalkLog } from '../types/walk';
+import type { HospitalLog, NewHospitalLog } from '../types/hospital';
 import { combineHealthLogs, type HealthLogKind, type HealthLogTarget } from '../utils/healthLog';
 import { getHealthInsight, getLast7DaysSummary, getTodaySummary } from '../utils/healthSummary';
 import { sortLogsNewestFirst } from '../utils/logDate';
@@ -10,6 +11,7 @@ import { LOG_TYPE_META } from '../utils/logTypeMeta';
 import { deleteMealLog, loadMealLogs, saveMealLogs, updateMealLog } from '../utils/mealStorage';
 import { deletePoopLog, loadPoopLogs, savePoopLogs, updatePoopLog } from '../utils/storage';
 import { deleteWalkLog, loadWalkLogs, saveWalkLogs, updateWalkLog } from '../utils/walkStorage';
+import { deleteHospitalLog, loadHospitalLogs, saveHospitalLogs, updateHospitalLog } from '../utils/hospitalStorage';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { HealthSummarySection } from './HealthSummarySection';
@@ -19,6 +21,7 @@ import { LogTypeIcon } from './LogTypeIcon';
 import { MealForm } from './MealForm';
 import { Toast } from './Toast';
 import { WalkForm } from './WalkForm';
+import { HospitalForm } from './HospitalForm';
 
 type Feedback = { message: string; isError?: boolean } | null;
 type RecorderKind = HealthLogKind;
@@ -44,7 +47,9 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const [poopLogs, setPoopLogs] = useState<PoopLog[]>([]);
 	const [mealLogs, setMealLogs] = useState<MealLog[]>([]);
 	const [walkLogs, setWalkLogs] = useState<WalkLog[]>([]);
+	const [hospitalLogs, setHospitalLogs] = useState<HospitalLog[]>([]);
 	const [activeRecorder, setActiveRecorder] = useState<RecorderKind | null>(null);
+	const [isCareRecordsOpen, setIsCareRecordsOpen] = useState(false);
 	const [feedback, setFeedback] = useState<Feedback>(null);
 	const [editingTarget, setEditingTarget] = useState<HealthLogTarget | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<HealthLogTarget | null>(null);
@@ -54,12 +59,14 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const editingPoopLog = editingTarget?.kind === 'poop' ? poopLogs.find((log) => log.id === editingTarget.id) : undefined;
 	const editingMealLog = editingTarget?.kind === 'meal' ? mealLogs.find((log) => log.id === editingTarget.id) : undefined;
 	const editingWalkLog = editingTarget?.kind === 'walk' ? walkLogs.find((log) => log.id === editingTarget.id) : undefined;
-	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog);
+	const editingHospitalLog = editingTarget?.kind === 'hospital' ? hospitalLogs.find((log) => log.id === editingTarget.id) : undefined;
+	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog || editingHospitalLog);
 
 	useEffect(() => {
 		setPoopLogs(sortLogsNewestFirst(loadPoopLogs()));
 		setMealLogs(sortLogsNewestFirst(loadMealLogs()));
 		setWalkLogs(sortLogsNewestFirst(loadWalkLogs()));
+		setHospitalLogs(sortLogsNewestFirst(loadHospitalLogs()));
 		setHasLoaded(true);
 		const params = new URLSearchParams(window.location.search);
 		if (params.get('dataReset') === '1') {
@@ -170,9 +177,43 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		return true;
 	}
 
+	function handleSubmitHospitalLog(input: NewHospitalLog) {
+		if (editingTarget?.kind === 'hospital') {
+			const updatedLogs = updateHospitalLog(hospitalLogs, { ...input, id: editingTarget.id });
+			if (!updatedLogs) {
+				showFeedback('保存できませんでした', true);
+				return false;
+			}
+			setHospitalLogs(sortLogsNewestFirst(updatedLogs));
+			notifyLogsChanged();
+			setEditingTarget(null);
+			showFeedback('更新しました');
+			return true;
+		}
+
+		const nextLog: HospitalLog = { ...input, id: createId() };
+		const nextLogs = sortLogsNewestFirst([nextLog, ...hospitalLogs]);
+		if (!saveHospitalLogs(nextLogs)) {
+			showFeedback('保存できませんでした', true);
+			return false;
+		}
+		setHospitalLogs(nextLogs);
+		notifyLogsChanged();
+		setActiveRecorder(null);
+		showFeedback('記録しました');
+		return true;
+	}
+
 	function handleStartEdit(target: HealthLogTarget) {
 		setActiveRecorder(null);
+		if (target.kind === 'hospital') setIsCareRecordsOpen(true);
 		setEditingTarget(target);
+	}
+
+	function handleCareRecordsToggle() {
+		const nextIsOpen = !isCareRecordsOpen;
+		setIsCareRecordsOpen(nextIsOpen);
+		if (!nextIsOpen && activeRecorder === 'hospital') setActiveRecorder(null);
 	}
 
 	function handleRecorderToggle(kind: RecorderKind) {
@@ -195,7 +236,9 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 			? deletePoopLog(poopLogs, deleteTarget.id)
 			: deleteTarget.kind === 'meal'
 				? deleteMealLog(mealLogs, deleteTarget.id)
-				: deleteWalkLog(walkLogs, deleteTarget.id);
+				: deleteTarget.kind === 'walk'
+					? deleteWalkLog(walkLogs, deleteTarget.id)
+					: deleteHospitalLog(hospitalLogs, deleteTarget.id);
 		if (!nextLogs) {
 			showFeedback('削除できませんでした', true);
 			return;
@@ -203,7 +246,8 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 
 		if (deleteTarget.kind === 'poop') setPoopLogs(sortLogsNewestFirst(nextLogs as PoopLog[]));
 		else if (deleteTarget.kind === 'meal') setMealLogs(sortLogsNewestFirst(nextLogs as MealLog[]));
-		else setWalkLogs(sortLogsNewestFirst(nextLogs as WalkLog[]));
+		else if (deleteTarget.kind === 'walk') setWalkLogs(sortLogsNewestFirst(nextLogs as WalkLog[]));
+		else setHospitalLogs(sortLogsNewestFirst(nextLogs as HospitalLog[]));
 		notifyLogsChanged();
 		if (isSameTarget(editingTarget, deleteTarget)) setEditingTarget(null);
 		setDeleteTarget(null);
@@ -211,7 +255,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	}
 
 	const isHistory = view === 'history';
-	const combinedLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs);
+	const combinedLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs, hospitalLogs);
 	const visibleLogs = isHistory ? combinedLogs : combinedLogs.slice(0, 5);
 	const todaySummary = getTodaySummary(poopLogs, mealLogs, walkLogs);
 	const weeklySummary = getLast7DaysSummary(poopLogs, mealLogs, walkLogs);
@@ -219,10 +263,23 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const FormHeading = isHistory ? 'h2' : 'h1';
 	const editKindLabel = editingTarget ? `${LOG_TYPE_META[editingTarget.kind].label}ログ` : '記録';
 
-	const recorderOptions = [
-		{ kind: 'walk' as const, label: 'さんぽログ', description: '時間や様子を記録できます' },
-		{ kind: 'meal' as const, label: 'ごはんログ', description: '種類や食べた量を記録できます' },
-		{ kind: 'poop' as const, label: 'うんちログ', description: '状態や場所を記録できます' },
+	const recorderGroups = [
+		{
+			id: 'daily-records',
+			label: '毎日の記録',
+			options: [
+				{ kind: 'walk' as const, label: 'さんぽログ', description: '時間や様子を記録できます' },
+				{ kind: 'meal' as const, label: 'ごはんログ', description: '種類や食べた量を記録できます' },
+				{ kind: 'poop' as const, label: 'うんちログ', description: '状態や場所を記録できます' },
+			],
+		},
+		{
+			id: 'care-records',
+			label: 'ケアの記録',
+			options: [
+				{ kind: 'hospital' as const, label: '病院ログ', description: '受診内容や費用を記録できます' },
+			],
+		},
 	];
 
 	return (
@@ -235,23 +292,31 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 					<p className="mt-1 text-sm leading-relaxed text-slate-500">{isEditing ? '内容を確認して更新できます' : '記録したい項目を選んでください'}</p>
 				</div>
 
-				{!isEditing && !isHistory && <div className="min-w-0 max-w-full space-y-2.5">
-					{recorderOptions.map(({ kind, label, description }) => {
-						const isOpen = activeRecorder === kind;
-						return <div key={kind} className={`min-w-0 max-w-full overflow-hidden rounded-2xl border transition ${isOpen ? 'border-brand-primary/45 bg-brand-subtle' : 'border-border-soft bg-white'}`}>
-							<button type="button" aria-expanded={isOpen} aria-controls={`recorder-${kind}`} onClick={() => handleRecorderToggle(kind)} className={`flex min-h-16 w-full items-center gap-3 px-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky ${isOpen ? 'text-brand-blue' : 'hover:bg-slate-50'}`}>
-								<span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-xl transition ${isOpen ? 'bg-white text-brand-primary ring-1 ring-brand-primary/25' : 'bg-brand-subtle text-brand-primary'}`}><LogTypeIcon kind={kind} size={23} /></span>
-								<span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${isOpen ? 'text-brand-blue' : 'text-slate-800'}`}>{label}</span><span className={`mt-0.5 block text-xs ${isOpen ? 'text-brand-blue/70' : 'text-slate-400'}`}>{description}</span></span>
-								<ChevronDown size={19} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-brand-blue' : 'text-slate-400'}`} />
-							</button>
-							{isOpen && <div id={`recorder-${kind}`} className="min-w-0 max-w-full border-t border-slate-100 px-4 pt-4 pb-5">{kind === 'poop' ? <LogForm isEditing={false} onSubmit={handleSubmitPoopLog} onCancelEdit={() => {}} /> : kind === 'meal' ? <MealForm isEditing={false} onSubmit={handleSubmitMealLog} onCancelEdit={() => {}} /> : <WalkForm isEditing={false} onSubmit={handleSubmitWalkLog} onCancelEdit={() => {}} />}</div>}
-						</div>;
+				{!isEditing && !isHistory && <div className="min-w-0 max-w-full space-y-5">
+					{recorderGroups.map((group) => {
+						const isCareGroup = group.id === 'care-records';
+						const isGroupVisible = !isCareGroup || isCareRecordsOpen;
+						return <section key={group.id} aria-labelledby={group.id}>
+							{isCareGroup ? <button type="button" aria-expanded={isCareRecordsOpen} aria-controls="care-records-content" onClick={handleCareRecordsToggle} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky"><span id={group.id} className="text-sm font-semibold leading-5 text-slate-700">{group.label}</span><ChevronDown size={19} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 text-slate-400 transition-transform ${isCareRecordsOpen ? 'rotate-180' : '-rotate-90'}`} /></button> : <h2 id={group.id} className="mb-2.5 text-sm font-semibold leading-5 text-slate-700">{group.label}</h2>}
+							{isGroupVisible && <div id={isCareGroup ? 'care-records-content' : undefined} className={`${isCareGroup ? 'mt-2.5' : ''} space-y-2.5`}>{group.options.map(({ kind, label, description }) => {
+							const isOpen = activeRecorder === kind;
+							return <div key={kind} className={`min-w-0 max-w-full overflow-hidden rounded-2xl border transition ${isOpen ? 'border-brand-primary/45 bg-brand-subtle' : 'border-border-soft bg-white'}`}>
+								<button type="button" aria-expanded={isOpen} aria-controls={`recorder-${kind}`} onClick={() => handleRecorderToggle(kind)} className={`flex min-h-16 w-full items-center gap-3 px-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky ${isOpen ? 'text-brand-blue' : 'hover:bg-slate-50'}`}>
+									<span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-xl transition ${isOpen ? 'bg-white text-brand-primary ring-1 ring-brand-primary/25' : 'bg-brand-subtle text-brand-primary'}`}><LogTypeIcon kind={kind} size={23} /></span>
+									<span className="min-w-0 flex-1"><span className={`block text-sm font-semibold ${isOpen ? 'text-brand-blue' : 'text-slate-800'}`}>{label}</span><span className={`mt-0.5 block text-xs ${isOpen ? 'text-brand-blue/70' : 'text-slate-400'}`}>{description}</span></span>
+									<ChevronDown size={19} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-brand-blue' : 'text-slate-400'}`} />
+								</button>
+								{isOpen && <div id={`recorder-${kind}`} className="min-w-0 max-w-full border-t border-slate-100 px-4 pt-4 pb-5">{kind === 'poop' ? <LogForm isEditing={false} onSubmit={handleSubmitPoopLog} onCancelEdit={() => {}} /> : kind === 'meal' ? <MealForm isEditing={false} onSubmit={handleSubmitMealLog} onCancelEdit={() => {}} /> : kind === 'walk' ? <WalkForm isEditing={false} onSubmit={handleSubmitWalkLog} onCancelEdit={() => {}} /> : <HospitalForm isEditing={false} onSubmit={handleSubmitHospitalLog} onCancelEdit={() => {}} />}</div>}
+							</div>;
+							})}</div>}
+						</section>;
 					})}
 				</div>}
 
 				{editingPoopLog && <LogForm initialValues={editingPoopLog} isEditing onSubmit={handleSubmitPoopLog} onCancelEdit={() => setEditingTarget(null)} />}
 				{editingMealLog && <MealForm initialValues={editingMealLog} isEditing onSubmit={handleSubmitMealLog} onCancelEdit={() => setEditingTarget(null)} />}
 				{editingWalkLog && <WalkForm initialValues={editingWalkLog} isEditing onSubmit={handleSubmitWalkLog} onCancelEdit={() => setEditingTarget(null)} />}
+				{editingHospitalLog && <HospitalForm initialValues={editingHospitalLog} isEditing onSubmit={handleSubmitHospitalLog} onCancelEdit={() => setEditingTarget(null)} />}
 			</section>}
 
 			<Toast message={feedback?.message ?? null} isError={feedback?.isError} placement="inline" />

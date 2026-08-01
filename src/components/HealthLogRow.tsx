@@ -37,7 +37,23 @@ function LogDetails({ entry }: { entry: HealthLogEntry }) {
 		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="meal" className="text-brand-primary" /><span className="font-semibold text-slate-800">{mealTypeLabels[entry.log.mealType]}</span><span className={`pc-badge ${entry.log.intake === 'none' ? 'border-rose-100 bg-danger-soft text-danger-strong' : 'border-sky-100 bg-brand-subtle text-brand-primary'}`}>{intakeLabels[entry.log.intake]}</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
 	}
 
-	return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="walk" className="text-brand-primary" /><span className="font-semibold text-slate-800">{entry.log.durationMinutes}分</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	if (entry.kind === 'walk') {
+		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="walk" className="text-brand-primary" /><span className="font-semibold text-slate-800">{entry.log.durationMinutes}分</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	}
+
+	const title = entry.log.hospitalName || entry.log.reason || '病院の記録';
+	const formattedCost = entry.log.costYen === undefined ? null : `${new Intl.NumberFormat('ja-JP').format(entry.log.costYen)}円`;
+	const formattedNextVisit = entry.log.nextVisitDate
+		? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(`${entry.log.nextVisitDate}T00:00:00`))
+		: null;
+	return <>
+		<div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="hospital" className="text-brand-primary" /><span className="font-semibold text-slate-800">{title}</span>{formattedCost && <span className="pc-badge border-sky-100 bg-brand-subtle text-brand-primary">{formattedCost}</span>}</div>
+		{entry.log.hospitalName && entry.log.reason && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-600">{entry.log.reason}</p>}
+		{formattedNextVisit && <p className="mt-1.5 text-xs font-medium text-slate-500">次回受診日：{formattedNextVisit}</p>}
+		{entry.log.diagnosis && <p className="mt-2 break-words text-sm leading-relaxed text-slate-500"><span className="font-semibold text-slate-600">診断・説明：</span>{entry.log.diagnosis}</p>}
+		{entry.log.prescription && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500"><span className="font-semibold text-slate-600">処方薬：</span>{entry.log.prescription}</p>}
+		{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500"><span className="font-semibold text-slate-600">メモ：</span>{entry.log.memo}</p>}
+	</>;
 }
 
 export function HealthLogRow({ entry, menuKey, isMenuOpen, onToggleMenu, onCloseMenu, onEdit, onRequestDelete, isLast }: HealthLogRowProps) {

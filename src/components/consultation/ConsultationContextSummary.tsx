@@ -14,7 +14,8 @@ const intakeLabels = { all: '完食', most: 'ほぼ完食', half: '半分くら�
 function logDescription(entry: HealthLogEntry) {
 	if (entry.kind === 'poop') return `${conditionLabels[entry.log.condition]}・${getPoopLocationDisplayLabel(entry.log.location)}${entry.log.coprophagia ? '・食糞あり' : ''}`;
 	if (entry.kind === 'meal') return intakeLabels[entry.log.intake];
-	return `${entry.log.durationMinutes}分`;
+	if (entry.kind === 'walk') return `${entry.log.durationMinutes}分`;
+	return entry.log.hospitalName || entry.log.reason || '病院の記録';
 }
 
 export function ConsultationContextSummary({ request }: { request: PetConsultationRequest }) {
