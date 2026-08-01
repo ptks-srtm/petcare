@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnalysisResultCard } from '../AnalysisResultCard';
+import type { AnalysisData } from '../../types/analysis';
 import type { ConsultationTopic, PetConsultationRequest, PetConsultationResponse } from '../../types/consultation';
 import { buildPetConsultationRequest } from '../../utils/buildConsultationRequest';
+import { loadGroomingLogs } from '../../utils/groomingStorage';
+import { loadHospitalLogs } from '../../utils/hospitalStorage';
 import { loadMealLogs } from '../../utils/mealStorage';
+import { loadMedicationLogs } from '../../utils/medicationStorage';
 import { mockPetConsultationClient, type PetConsultationClient } from '../../utils/mockConsultationClient';
 import { loadPetProfile } from '../../utils/profileStorage';
 import { loadPoopLogs } from '../../utils/storage';
+import { loadVaccineLogs } from '../../utils/vaccineStorage';
 import { loadWalkLogs } from '../../utils/walkStorage';
+import { loadWeightLogs } from '../../utils/weightStorage';
 import { ConsultationAnswer } from './ConsultationAnswer';
 import { ConsultationContextSummary } from './ConsultationContextSummary';
 import { ConsultationForm } from './ConsultationForm';
@@ -14,6 +21,7 @@ export function ConsultationApp({ client = mockPetConsultationClient }: { client
 	const [topic, setTopic] = useState<ConsultationTopic | null>(null);
 	const [concern, setConcern] = useState('');
 	const [context, setContext] = useState<PetConsultationRequest | null>(null);
+	const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
 	const [submittedRequest, setSubmittedRequest] = useState<PetConsultationRequest | null>(null);
 	const [response, setResponse] = useState<PetConsultationResponse | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,7 +30,9 @@ export function ConsultationApp({ client = mockPetConsultationClient }: { client
 	const formRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		setContext(buildCurrentRequest('overall', ''));
+		const data = loadCurrentAnalysisData();
+		setAnalysisData(data);
+		setContext(buildCurrentRequest('overall', '', data));
 	}, []);
 
 	const displayContext = useMemo(() => context ? { ...context, topic: topic ?? context.topic, concern } : null, [concern, context, topic]);
@@ -32,7 +42,7 @@ export function ConsultationApp({ client = mockPetConsultationClient }: { client
 		if (!topic || !trimmedConcern || isSubmitting) return;
 		setIsSubmitting(true);
 		setError(null);
-		const payload = buildCurrentRequest(topic, trimmedConcern);
+		const payload = buildCurrentRequest(topic, trimmedConcern, analysisData ?? loadCurrentAnalysisData());
 		try {
 			const nextResponse = await client.consult(payload);
 			setSubmittedRequest(payload);
@@ -67,16 +77,30 @@ export function ConsultationApp({ client = mockPetConsultationClient }: { client
 			? <ConsultationAnswer answerRef={answerRef} request={submittedRequest} response={response} onEdit={handleEdit} onReset={handleReset} />
 			: <div ref={formRef} tabIndex={-1} className="focus:outline-none"><ConsultationForm topic={topic} concern={concern} isSubmitting={isSubmitting} error={error} onTopicChange={setTopic} onConcernChange={setConcern} onSubmit={handleSubmit} /></div>}
 		<ConsultationContextSummary request={response && submittedRequest ? submittedRequest : displayContext} />
+		{analysisData && <AnalysisResultCard data={analysisData} />}
 	</div>;
 }
 
-function buildCurrentRequest(topic: ConsultationTopic, concern: string) {
+function buildCurrentRequest(topic: ConsultationTopic, concern: string, data: AnalysisData) {
 	return buildPetConsultationRequest({
 		topic,
 		concern,
 		profile: loadPetProfile(),
+		poopLogs: data.poopLogs,
+		mealLogs: data.mealLogs,
+		walkLogs: data.walkLogs,
+	});
+}
+
+function loadCurrentAnalysisData(): AnalysisData {
+	return {
 		poopLogs: loadPoopLogs(),
 		mealLogs: loadMealLogs(),
 		walkLogs: loadWalkLogs(),
-	});
+		weightLogs: loadWeightLogs(),
+		hospitalLogs: loadHospitalLogs(),
+		medicationLogs: loadMedicationLogs(),
+		vaccineLogs: loadVaccineLogs(),
+		groomingLogs: loadGroomingLogs(),
+	};
 }
