@@ -1,52 +1,147 @@
-# PetCare
+# 🐶🐱 PetCare
 
-PetCareは、犬・猫の毎日の健康状態や通院・お薬・定期的なケアを気軽に記録し、振り返るためのWebアプリです。
+![Astro](https://img.shields.io/badge/Astro-7.x-FF5D01)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-病院のカルテのように堅くなりすぎず、清潔感・安心感・親しみやすさを感じられる体験を目指しています。短時間で記録できるフォーム、日別タイムライン、期間別の傾向、記録を整理するモックAI相談を備えています。
+PetCareは、犬や猫との毎日を記録し、健康の変化を振り返るためのWebアプリです。
 
-> データは端末・ブラウザごとの`localStorage`に保存され、クラウドには同期されません。ブラウザデータを削除すると記録も削除されるため、必要に応じてJSONバックアップをご利用ください。
+さんぽ・ごはん・うんちから、体重・病院・お薬・ワクチン・お手入れまでをまとめて記録し、期間ごとの傾向や記録上の変化を確認できます。記録はブラウザ内に保存され、JSON形式でバックアップできます。
 
-## スクリーンショット
+## Live Demo
 
-![PetCareのスクリーンショット（準備中）](docs/screenshots/placeholder.svg)
+[PetCareを開く](https://petcare-cyan-theta.vercel.app/)
 
-実際の画面が公開可能になり次第、モバイル表示を中心としたスクリーンショットへ差し替える予定です。
+> 現在、データは端末・ブラウザごとの`localStorage`に保存されます。クラウド同期には対応していません。
 
-## 主な機能
+## Screenshots
 
-- **うんちログ**：日時、状態、食糞、ユーザー設定可能な場所、メモを記録
-- **ごはんログ**：食事の種類、食べた量、メモを記録
-- **さんぽログ**：開始日時、所要時間、メモを記録
-- **病院ログ**：受診日時、病院名、受診理由、診断、処方薬、費用、次回受診日、メモを記録
-- **体重ログ**：記録日時、0.01kg単位の体重、メモを記録
-- **お薬ログ**：薬名、用量、服用回数・タイミング、服用期間、処方した病院、メモを記録
-- **ワクチンログ**：ワクチン名、病院名、費用、次回予定日、メモを記録
-- **お手入れログ**：カット、シャンプー、爪切りなど複数のケア内容と費用・次回予定を記録
-- **タイムライン**：8種類のログを日付・時刻順にまとめ、編集・削除
-- **Trends**：体重、さんぽ、ごはん、うんち、病院の記録を7日・30日・90日で集計し、数値、簡易グラフ、前期間との事実ベースの気づきを表示
-- **AI相談（モック）**：プロフィールと7日間の記録を整理し、確認ポイントを構造化して表示
-- **プロフィール**：犬・猫の基本情報、年齢計算、デフォルトアイコン、画像クロップ
-- **データ管理**：プロフィール、ログ、場所設定のJSON書き出し・読み込み・一括削除
-- **端末内保存**：`localStorage`へ保存し、再読み込み後も復元
+### Home
 
-## 記録カテゴリの設計
+毎日の記録と、必要なときに開けるケアの記録をひとつの画面にまとめています。
 
-- **毎日の記録**：さんぽ、ごはん、うんちなど、高頻度で記録する日常の行動
-- **ケアの記録**：病院、お薬、ワクチン、体重、お手入れなど、低頻度で行う健康管理や定期的なケア
+<img src="docs/screenshots/home.png" alt="PetCareのHome画面" width="390" />
 
-ケアの記録は初期状態では折りたたみ、必要なときに病院・お薬・ワクチン・体重・お手入れを選んで記録できます。
+### Trends
 
-## 技術構成
+期間を切り替えながら、体重や毎日の記録、病院の記録を振り返れます。
+
+<img src="docs/screenshots/trends.png" alt="PetCareの傾向画面" width="390" />
+
+### AI Consultation
+
+直近7日間の記録を整理し、相談内容に応じた確認ポイントをモック回答で表示します。
+
+<img src="docs/screenshots/consult.png" alt="PetCareのAI相談画面" width="390" />
+
+## Features
+
+### 毎日の記録
+
+- **さんぽ**：日時、散歩時間、メモ
+- **ごはん**：食事の種類、食べた量、メモ
+- **うんち**：日時、状態、食糞、ユーザー設定可能な場所、メモ
+
+### ケアの記録
+
+- **病院**：受診内容、診断・説明、処方薬、費用、次回受診日
+- **体重**：0.01kg単位の体重とメモ
+- **お薬**：薬名、用量、服用タイミング、服用期間、処方した病院
+- **ワクチン**：ワクチン名、病院名、費用、次回予定日
+- **お手入れ**：複数のケア内容、実施場所、費用、次回予定日
+
+すべての記録は新規登録・編集・削除に対応し、Homeと健康記録画面の共通タイムラインへ日時順に表示されます。
+
+### 傾向
+
+- 7日・30日・90日の期間切り替え
+- 体重の推移、最新値、期間平均、前回差
+- さんぽ時間、ごはんの摂取状況、うんちの状態を集計
+- 病院の受診回数と医療費を表示
+
+### 記録からの気づき
+
+- 選択期間と直前の同じ長さの期間をルールベースで比較
+- 件数・割合・合計時間など、記録から確認できる事実のみを表示
+- 健康評価、診断、原因推測は行わない設計
+
+### AI相談（モック）
+
+- プロフィールと直近7日間の記録を相談用データへ整理
+- 相談テーマと入力内容に応じた構造化モック回答を表示
+- 外部AI APIには未接続
+
+### プロフィールとデータ管理
+
+- 犬・猫のプロフィール、年齢計算、プロフィール画像
+- うんちをした場所の選択肢管理
+- JSON形式のバックアップ、復元、全データ削除
+
+## Tech Stack
 
 | 分類 | 技術 |
 | --- | --- |
-| フレームワーク | Astro |
-| UI | React |
-| スタイリング | Tailwind CSS |
-| 言語 | TypeScript |
-| アイコン | Lucide React、共通カスタムSVG |
-| フォント | LINE Seed JP |
-| データ保存 | Web Storage API（`localStorage`） |
+| Framework | Astro 7 |
+| Interactive UI | React 19 |
+| Language | TypeScript 6 |
+| Styling | Tailwind CSS 4 |
+| Icons | Lucide React、カスタムSVG |
+| Font | LINE Seed JP |
+| Storage | Web Storage API（`localStorage`） |
+| Hosting | Vercel |
+| Test | Node.js Test Runner |
+
+## Local Development
+
+Node.js 22.12.0以上とnpmが必要です。
+
+```bash
+git clone https://github.com/ptks-srtm/petcare.git
+cd petcare
+npm install
+npm run dev
+```
+
+品質チェックとプロダクションビルドは次のコマンドで実行できます。
+
+```bash
+npm test
+npm run astro -- check
+npm run build
+```
+
+## Project Structure
+
+```text
+petcare/
+├── public/              # favicon、manifest、静的アセット
+├── docs/                # 要件、素材情報、スクリーンショット
+├── src/
+│   ├── components/      # 記録フォーム、カード、対話UI
+│   ├── layouts/         # 共通HTMLレイアウト
+│   ├── pages/           # Astroのファイルベースルーティング
+│   ├── styles/          # デザイントークンと共通スタイル
+│   ├── types/           # ログ・プロフィール・相談データの型
+│   └── utils/           # 保存、集計、バックアップ、検証
+├── BACKLOG.md           # 今後の開発候補
+└── CHANGELOG.md         # リリース履歴
+```
+
+## Roadmap
+
+- [ ] AI相談の外部API接続と回答体験の改善
+- [ ] 英語対応
+- [ ] 犬・猫それぞれに合わせた入力項目の最適化
+- [ ] 複数頭のプロフィールと記録管理
+- [ ] 認証を伴う複数ユーザー管理
+
+詳しい検討内容は[BACKLOG.md](BACKLOG.md)、リリース履歴は[CHANGELOG.md](CHANGELOG.md)を参照してください。
+
+## License
+
+PetCareのソースコードは[MIT License](LICENSE)で提供しています。
 
 ## Third-party assets
 
@@ -57,95 +152,4 @@ The dog and cat profile icons used in PetCare are provided by ICOOON MONO.
 - These assets are not covered by this repository's MIT License.
 - Use and redistribution of these assets are subject to the terms of ICOOON MONO.
 
-## ディレクトリ構成
-
-```text
-petcare/
-├── docs/                  # 要件とスクリーンショット
-├── public/                # 静的ファイル
-├── src/
-│   ├── components/        # 各種記録フォーム、日付カード、相談画面
-│   ├── layouts/           # 共通レイアウト
-│   ├── pages/             # ホーム、履歴、傾向、設定、プロフィール・記録設定
-│   ├── styles/            # グローバルスタイル
-│   ├── types/             # プロフィール、健康ログ、相談データの型
-│   └── utils/             # 保存、時系列・集計、相談データ生成
-├── BACKLOG.md             # 今後の開発候補
-├── CHANGELOG.md           # リリース履歴
-└── PROJECT.md             # 設計方針と責務
-```
-
-## セットアップ
-
-### 必要な環境
-
-- Node.js 22.12.0以上
-- npm
-
-### 起動方法
-
-GitHubリポジトリURLは公開時に追記予定です。取得済みのプロジェクトフォルダで次を実行してください。
-
-```bash
-npm install
-npm run dev
-```
-
-開発サーバー起動後、ターミナルに表示されたURLをブラウザで開いてください。
-
-バックグラウンドで起動する場合：
-
-```bash
-npm run astro -- dev --background
-```
-
-### ビルド
-
-```bash
-npm run build
-```
-
-生成されたサイトをローカルで確認する場合：
-
-```bash
-npm run preview
-```
-
-## データのバックアップ
-
-Settingsの「データ管理」から、現在のプロフィール、うんち・ごはん・さんぽ・病院・お薬・ワクチン・体重・お手入れ記録、場所設定をJSONファイルへ書き出せます。ファイル名は`PetCare-YYYY-MM-DD.json`です。
-
-復元する場合は「読み込む」から、PetCareで書き出したJSONファイルを選択してください。読み込みを実行すると、現在ブラウザに保存されているデータはバックアップ内容で上書きされます。
-
-データは引き続きブラウザ内の`localStorage`に保存されます。ブラウザデータの削除や「すべて削除」を実行する前に、必要に応じてバックアップしてください。
-
-## 今後追加予定の機能
-
-- 記録の検索・絞り込み
-- フードマスターと食事量の詳細管理
-- 気づきの長期変化、表示設定、AI相談との連携
-- 毛色とより詳細な医療情報
-- 複数ペットへの対応
-- 写真付き記録
-- カレンダー表示と長期的な健康傾向
-- 毎回の服用チェック、通知、水分などの健康ログ
-- 複数端末での同期とログイン
-
-優先順位や検討状況は[BACKLOG.md](BACKLOG.md)、リリースごとの変更内容は[CHANGELOG.md](CHANGELOG.md)を参照してください。
-
-## ドキュメント
-
-- [プロジェクト方針](PROJECT.md)
-- [Sprint 1要件](docs/requirements.md)
-- [ロードマップ](BACKLOG.md)
-- [変更履歴](CHANGELOG.md)
-
-## GitHub公開準備
-
-`repository`、`homepage`、`bugs`のURLは未確定のため、package.jsonへダミーURLを設定していません。リポジトリ公開時に実URLを追記します。
-
-## ライセンス
-
-アプリケーションのソースコードは[MIT License](LICENSE)で提供します。
-
-`public/icons/profile/`の提供SVG素材は、元ファイルに出典・ライセンス情報が含まれていません。これらの素材はMIT Licenseの対象と断定せず、公開前に配布元と利用条件を確認してください。詳細は[プロフィールアイコン素材の管理メモ](docs/profile-icon-assets.md)を参照してください。
+プロフィールアイコン素材の管理方針は[docs/profile-icon-assets.md](docs/profile-icon-assets.md)を参照してください。

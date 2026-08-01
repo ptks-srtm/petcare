@@ -1,14 +1,12 @@
 ---
-import { Cat, Dog, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
+import AppLogo from './AppLogo';
 ---
 
 <header class="border-b border-border-soft bg-white/95 backdrop-blur">
 	<div class="mx-auto flex max-w-xl items-center justify-between gap-3 px-5 py-4">
 		<a href="/" class="flex items-center gap-3 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky" aria-label="PetCare ホーム">
-			<span class="flex size-11 shrink-0 items-center justify-center gap-0.5 rounded-2xl bg-brand-subtle text-brand-primary ring-1 ring-border-soft" aria-hidden="true">
-				<Dog size={19} strokeWidth={1.8} />
-				<Cat size={17} strokeWidth={1.8} />
-			</span>
+			<AppLogo size="md" />
 			<span>
 				<span class="block text-lg font-semibold tracking-tight text-slate-800">PetCare</span>
 				<span class="block text-xs font-normal text-slate-500">ペットの毎日を記録しよう</span>

@@ -2,6 +2,18 @@
 
 PetCareの主な変更内容を記録します。このファイルは[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)を参考にし、バージョン番号には[Semantic Versioning](https://semver.org/lang/ja/)を採用します。
 
+## [1.5.1] - 2026-08-01
+
+### Added
+
+- PetCareロゴを利用したfavicon、Apple Touch Icon、manifest用アイコン
+- Web App Manifest
+
+### Changed
+
+- ヘッダーの犬・猫アイコンを共通の`AppLogo`コンポーネントへ整理
+- アプリのバージョンを`1.5.1`へ更新
+
 ## [1.5.0] - 2026-08-01
 
 ### Added
