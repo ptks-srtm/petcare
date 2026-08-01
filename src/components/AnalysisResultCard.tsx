@@ -6,7 +6,13 @@ import { analysisEngine } from '../utils/analysisEngine';
 const questions = [
 	{ value: AnalysisQuestion.PoopTime, label: '食糞しやすい時間は？' },
 	{ value: AnalysisQuestion.PoopPlace, label: '食糞しやすい場所は？' },
+	{ value: AnalysisQuestion.PoopState, label: '最近のうんち状態は？' },
+	{ value: AnalysisQuestion.MealPattern, label: '最近のごはん回数は？' },
+	{ value: AnalysisQuestion.WalkPattern, label: '最近のさんぽ時間は？' },
 	{ value: AnalysisQuestion.WeightTrend, label: '最近の体重変化は？' },
+	{ value: AnalysisQuestion.MemoKeywords, label: 'メモによく含まれる言葉は？' },
+	{ value: AnalysisQuestion.HospitalSummary, label: '病院の記録をまとめると？' },
+	{ value: AnalysisQuestion.CareSummary, label: 'ケアの記録件数は？' },
 ] as const;
 
 export function AnalysisResultCard({ data }: { data: AnalysisData }) {
@@ -39,11 +45,11 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 			</button>)}
 		</div>
 
-		<div className="mt-4 rounded-2xl border border-border-soft bg-slate-50/70 p-4" aria-live="polite" aria-atomic="true">
+		<div className="mt-4 min-w-0 rounded-2xl border border-border-soft bg-slate-50/70 p-4 [overflow-wrap:anywhere]" aria-live="polite" aria-atomic="true">
 			{result ? <>
 				<h3 className="text-sm font-semibold text-slate-800">{result.title}</h3>
-				<p className="mt-2 text-sm leading-relaxed text-slate-700">{result.summary}</p>
-				{result.facts.length > 0 && <ul className="mt-3 space-y-1.5 text-sm text-slate-600">{result.facts.map((fact) => <li key={fact}>・{fact}</li>)}</ul>}
+				<p className="mt-2 break-words text-sm leading-relaxed text-slate-700">{result.summary}</p>
+				{result.facts.length > 0 && <ul className="mt-3 space-y-1.5 text-sm text-slate-600">{result.facts.map((fact) => <li key={fact} className="break-words">・{fact}</li>)}</ul>}
 				{result.note && <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs leading-relaxed text-slate-500">{result.note}</p>}
 				<p className="mt-3 text-xs text-slate-500">対象件数：{result.relatedLogs}件</p>
 			</> : <p className="text-sm leading-relaxed text-slate-500">質問を選ぶと、ここに分析結果を表示します。</p>}
