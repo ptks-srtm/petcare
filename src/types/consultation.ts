@@ -1,6 +1,8 @@
 import type { PetProfile } from './profile';
 import type { HealthLogEntry } from '../utils/healthLog';
 
+export type ConsultationHealthLog = Extract<HealthLogEntry, { kind: 'poop' | 'meal' | 'walk' }>;
+
 export type ConsultationTopic = 'poop' | 'meal' | 'walk' | 'overall' | 'other';
 
 export type ConsultationPet = {
@@ -24,7 +26,7 @@ export type PetConsultationRequest = {
 	pet: ConsultationPet;
 	period: { from: string; to: string; label: string };
 	summary: ConsultationSummary;
-	recentLogs: HealthLogEntry[];
+	recentLogs: ConsultationHealthLog[];
 };
 
 export type PetConsultationResponse = {

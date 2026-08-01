@@ -1,5 +1,5 @@
 import type { PetProfile } from '../types/profile';
-import { isProfileDefaultIconId } from './profileDefaultIcons';
+import { isProfileDefaultIconId } from './profileDefaultIcons.ts';
 
 export const PET_PROFILE_STORAGE_KEY = 'petcare:pet-profile';
 

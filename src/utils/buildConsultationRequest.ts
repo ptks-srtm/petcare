@@ -2,7 +2,7 @@ import type { PoopLog } from '../types/log';
 import type { MealLog } from '../types/meal';
 import type { PetProfile } from '../types/profile';
 import type { WalkLog } from '../types/walk';
-import type { ConsultationTopic, PetConsultationRequest } from '../types/consultation';
+import type { ConsultationHealthLog, ConsultationTopic, PetConsultationRequest } from '../types/consultation';
 import { combineHealthLogs } from './healthLog';
 import { getLocalDayRange, isWithinRange } from './healthSummary';
 import { getWeeklyHealthTrends } from './healthTrends';
@@ -18,7 +18,9 @@ export function buildPetConsultationRequest({ topic, concern, profile, poopLogs,
 }): PetConsultationRequest {
 	const trends = getWeeklyHealthTrends(poopLogs, mealLogs, walkLogs, referenceDate);
 	const { start, end } = getLocalDayRange(referenceDate, 7);
-	const recentLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs).filter((entry) => isWithinRange(entry.datetime, start, end));
+	const recentLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs)
+		.filter((entry): entry is ConsultationHealthLog => entry.kind === 'poop' || entry.kind === 'meal' || entry.kind === 'walk')
+		.filter((entry) => isWithinRange(entry.datetime, start, end));
 	return {
 		topic,
 		concern: concern.trim(),

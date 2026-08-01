@@ -1,5 +1,6 @@
 import type { PoopLog } from '../types/log';
 import type { MealLog } from '../types/meal';
+import type { GroomingLocation, GroomingService } from '../types/grooming';
 import type { HealthLogEntry, HealthLogTarget } from '../utils/healthLog';
 import { formatLogTime } from '../utils/logDate';
 import { LOG_TYPE_META, type LogType } from '../utils/logTypeMeta';
@@ -22,6 +23,16 @@ const conditionLabels: Record<PoopLog['condition'], string> = { normal: 'ふつ�
 const conditionStyles: Record<PoopLog['condition'], string> = { normal: 'border-emerald-100 bg-emerald-50 text-emerald-700', soft: 'border-amber-100 bg-amber-50 text-amber-700', hard: 'border-orange-100 bg-orange-50 text-orange-700' };
 const mealTypeLabels: Record<MealLog['mealType'], string> = { breakfast: '朝ごはん', lunch: '昼ごはん', dinner: '夜ごはん', snack: 'おやつ', other: 'その他' };
 const intakeLabels: Record<MealLog['intake'], string> = { all: '完食', most: 'ほぼ完食', half: '半分くらい', little: '少しだけ', none: '食べなかった' };
+const groomingServiceLabels: Record<GroomingService, string> = { cut: 'カット', shampoo: 'シャンプー', nailTrim: '爪切り', earCleaning: '耳掃除', brushing: 'ブラッシング', dentalCare: 'デンタルケア', other: 'その他' };
+const groomingLocationLabels: Record<GroomingLocation, string> = { salon: 'サロン', home: '自宅', other: 'その他' };
+
+function formatDate(value: string) {
+	return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatCost(value: number | undefined) {
+	return value === undefined ? null : `${new Intl.NumberFormat('ja-JP').format(value)}円`;
+}
 
 function LogKindLabel({ kind, className }: { kind: LogType; className: string }) {
 	const { label } = LOG_TYPE_META[kind];
@@ -46,10 +57,26 @@ function LogDetails({ entry }: { entry: HealthLogEntry }) {
 		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="weight" className="text-brand-primary" /><span className="font-semibold tabular-nums text-slate-800">{formattedWeight}kg</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
 	}
 
+	if (entry.kind === 'medication') {
+		const period = entry.log.startDate || entry.log.endDate ? `${entry.log.startDate ? formatDate(entry.log.startDate) : '開始日未入力'}〜${entry.log.endDate ? formatDate(entry.log.endDate) : '終了日未入力'}` : null;
+		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="medication" className="text-brand-primary" /><span className="font-semibold text-slate-800">{entry.log.medicineName}</span>{entry.log.dosage && <span className="pc-badge border-sky-100 bg-brand-subtle text-brand-primary">{entry.log.dosage}</span>}</div>{entry.log.frequency && <p className="mt-1.5 break-words text-sm text-slate-600">服用：{entry.log.frequency}</p>}{period && <p className="mt-1.5 break-words text-xs text-slate-500">服用期間：{period}</p>}{entry.log.hospitalName && <p className="mt-1.5 break-words text-xs text-slate-500">処方：{entry.log.hospitalName}</p>}{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	}
+
+	if (entry.kind === 'vaccine') {
+		const cost = formatCost(entry.log.costYen);
+		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="vaccine" className="text-brand-primary" /><span className="font-semibold text-slate-800">{entry.log.vaccineName}</span>{cost && <span className="pc-badge border-sky-100 bg-brand-subtle text-brand-primary">{cost}</span>}</div>{entry.log.hospitalName && <p className="mt-1.5 break-words text-sm text-slate-600">{entry.log.hospitalName}</p>}{entry.log.nextVaccinationDate && <p className="mt-1.5 text-xs text-slate-500">次回予定日：{formatDate(entry.log.nextVaccinationDate)}</p>}{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	}
+
+	if (entry.kind === 'grooming') {
+		const services = entry.log.services.map((service) => service === 'other' && entry.log.otherService ? entry.log.otherService : groomingServiceLabels[service]).join('・');
+		const cost = formatCost(entry.log.costYen);
+		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="grooming" className="text-brand-primary" /><span className="font-semibold text-slate-800">{services}</span>{cost && <span className="pc-badge border-sky-100 bg-brand-subtle text-brand-primary">{cost}</span>}</div>{(entry.log.location || entry.log.salonName) && <p className="mt-1.5 break-words text-sm text-slate-600">{entry.log.location ? groomingLocationLabels[entry.log.location] : ''}{entry.log.location && entry.log.salonName ? '・' : ''}{entry.log.salonName ?? ''}</p>}{entry.log.nextCareDate && <p className="mt-1.5 text-xs text-slate-500">次回予定日：{formatDate(entry.log.nextCareDate)}</p>}{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	}
+
 	const title = entry.log.hospitalName || entry.log.reason || '病院の記録';
-	const formattedCost = entry.log.costYen === undefined ? null : `${new Intl.NumberFormat('ja-JP').format(entry.log.costYen)}円`;
+	const formattedCost = formatCost(entry.log.costYen);
 	const formattedNextVisit = entry.log.nextVisitDate
-		? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(`${entry.log.nextVisitDate}T00:00:00`))
+		? formatDate(entry.log.nextVisitDate)
 		: null;
 	return <>
 		<div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="hospital" className="text-brand-primary" /><span className="font-semibold text-slate-800">{title}</span>{formattedCost && <span className="pc-badge border-sky-100 bg-brand-subtle text-brand-primary">{formattedCost}</span>}</div>

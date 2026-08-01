@@ -1,7 +1,6 @@
-import type { HealthLogEntry } from '../../utils/healthLog';
 import { formatLogDateLabel, formatLogTime } from '../../utils/logDate';
 import { getPoopLocationDisplayLabel } from '../../utils/poopLocationOptions';
-import type { PetConsultationRequest } from '../../types/consultation';
+import type { ConsultationHealthLog, PetConsultationRequest } from '../../types/consultation';
 import { formatPetAge } from '../../utils/petAge';
 import { LOG_TYPE_META } from '../../utils/logTypeMeta';
 import { LogTypeIcon } from '../LogTypeIcon';
@@ -11,12 +10,10 @@ const sexLabels = { male: 'オス', female: 'メス' } as const;
 const conditionLabels = { normal: 'ふつう', soft: 'やわらかめ', hard: 'かため' } as const;
 const intakeLabels = { all: '完食', most: 'ほぼ完食', half: '半分くらい', little: '少しだけ', none: '食べなかった' } as const;
 
-function logDescription(entry: HealthLogEntry) {
+function logDescription(entry: ConsultationHealthLog) {
 	if (entry.kind === 'poop') return `${conditionLabels[entry.log.condition]}・${getPoopLocationDisplayLabel(entry.log.location)}${entry.log.coprophagia ? '・食糞あり' : ''}`;
 	if (entry.kind === 'meal') return intakeLabels[entry.log.intake];
-	if (entry.kind === 'walk') return `${entry.log.durationMinutes}分`;
-	if (entry.kind === 'hospital') return entry.log.hospitalName || entry.log.reason || '病院の記録';
-	return `${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 }).format(entry.log.weightKg)}kg`;
+	return `${entry.log.durationMinutes}分`;
 }
 
 export function ConsultationContextSummary({ request }: { request: PetConsultationRequest }) {
