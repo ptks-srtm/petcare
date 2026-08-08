@@ -8,7 +8,7 @@ export type MemoKeywordCount = MemoKeywordDefinition & {
 	count: number;
 };
 
-export const MEMO_KEYWORDS: readonly MemoKeywordDefinition[] = [
+export const MEMO_KEYWORDS = [
 	{ id: 'morning', label: '朝', patterns: ['朝'] },
 	{ id: 'night', label: '夜', patterns: ['夜'] },
 	{ id: 'rain', label: '雨', patterns: ['雨', '雨天'] },
@@ -29,15 +29,28 @@ export const MEMO_KEYWORDS: readonly MemoKeywordDefinition[] = [
 	{ id: 'exercise', label: '運動', patterns: ['運動'] },
 	{ id: 'meal', label: 'ごはん', patterns: ['ごはん'] },
 	{ id: 'medicine', label: '薬', patterns: ['薬'] },
-];
+] as const satisfies readonly MemoKeywordDefinition[];
+
+export type MemoKeywordId = (typeof MEMO_KEYWORDS)[number]['id'];
+export type MemoKeyword = (typeof MEMO_KEYWORDS)[number];
+
+export function getMemoKeyword(keywordId: string): MemoKeyword | null {
+	return MEMO_KEYWORDS.find((keyword) => keyword.id === keywordId) ?? null;
+}
+
+export function memoMatchesKeyword(memo: string, keywordId: MemoKeywordId): boolean {
+	const keyword = getMemoKeyword(keywordId);
+	if (!keyword) return false;
+	const normalizedMemo = normalizeMemoText(memo);
+	return keyword.patterns.some((pattern) => normalizedMemo.includes(normalizeMemoText(pattern)));
+}
 
 export function countMemoKeywords(memos: readonly string[], limit = 5): MemoKeywordCount[] {
 	const counts = new Map<string, number>();
 	for (const memo of memos) {
-		const normalizedMemo = normalizeMemoText(memo);
 		const matchedIds = new Set<string>();
 		for (const keyword of MEMO_KEYWORDS) {
-			if (keyword.patterns.some((pattern) => normalizedMemo.includes(normalizeMemoText(pattern)))) matchedIds.add(keyword.id);
+			if (memoMatchesKeyword(memo, keyword.id)) matchedIds.add(keyword.id);
 		}
 		for (const id of matchedIds) counts.set(id, (counts.get(id) ?? 0) + 1);
 	}

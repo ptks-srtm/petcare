@@ -6,6 +6,7 @@ import type { MedicationLog } from './medication';
 import type { VaccineLog } from './vaccine';
 import type { WalkLog } from './walk';
 import type { WeightLog } from './weight';
+import type { MemoKeywordId } from '../utils/memoKeywords';
 
 export const AnalysisQuestion = {
 	PoopTime: 'poop_time',
@@ -20,6 +21,7 @@ export const AnalysisQuestion = {
 	CoprophagiaDaySummary: 'coprophagia_day_summary',
 	NoMealDaySummary: 'no_meal_day_summary',
 	BeforeLatestHospital: 'before_latest_hospital',
+	MemoKeywordDays: 'memo_keyword_days',
 } as const;
 
 export type AnalysisQuestion = (typeof AnalysisQuestion)[keyof typeof AnalysisQuestion];
@@ -36,6 +38,7 @@ export type AnalysisResult = {
 	relatedLogs: number;
 	hasEnoughData: boolean;
 	note?: string;
+	description?: string;
 	meta?: AnalysisResultMetaItem[];
 };
 
@@ -54,6 +57,18 @@ export type AnalysisOptions = {
 	referenceDate?: Date;
 };
 
+export type ExistingAnalysisRequest = {
+	question: Exclude<AnalysisQuestion, typeof AnalysisQuestion.MemoKeywordDays>;
+};
+
+export type MemoKeywordDaysRequest = {
+	question: typeof AnalysisQuestion.MemoKeywordDays;
+	keywordId: MemoKeywordId;
+};
+
+export type AnalysisRequest = ExistingAnalysisRequest | MemoKeywordDaysRequest;
+
 export interface AnalysisEngine {
 	analyze(question: AnalysisQuestion, data: AnalysisData, options?: AnalysisOptions): AnalysisResult;
+	analyzeRequest(request: AnalysisRequest, data: AnalysisData, options?: AnalysisOptions): AnalysisResult;
 }

@@ -2,6 +2,7 @@ import { BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import { AnalysisQuestion, type AnalysisData, type AnalysisResult } from '../types/analysis';
 import { analysisEngine } from '../utils/analysisEngine';
+import { getMemoKeyword, MEMO_KEYWORDS, type MemoKeywordId } from '../utils/memoKeywords';
 
 const questionGroups = [
 	{ label: 'うんち', questions: [
@@ -23,16 +24,35 @@ const questionGroups = [
 		{ value: AnalysisQuestion.CoprophagiaDaySummary, label: '食糞ありの日の記録は？' },
 		{ value: AnalysisQuestion.NoMealDaySummary, label: 'ごはんを食べなかった日の記録は？' },
 		{ value: AnalysisQuestion.BeforeLatestHospital, label: '最新の病院受診前の記録は？' },
+		{ value: AnalysisQuestion.MemoKeywordDays, label: 'メモの言葉から記録を見る' },
 	] },
 ] as const;
 
 export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 	const [result, setResult] = useState<AnalysisResult | null>(null);
 	const [selectedQuestion, setSelectedQuestion] = useState<AnalysisQuestion | null>(null);
+	const [selectedKeywordId, setSelectedKeywordId] = useState<MemoKeywordId | null>(null);
 
 	function handleAnalyze(question: AnalysisQuestion) {
 		setSelectedQuestion(question);
+		if (question === AnalysisQuestion.MemoKeywordDays) {
+			setResult(selectedKeywordId
+				? analysisEngine.analyzeRequest({ question, keywordId: selectedKeywordId }, data)
+				: null);
+			return;
+		}
 		setResult(analysisEngine.analyze(question, data));
+	}
+
+	function handleKeywordChange(value: string) {
+		const keyword = getMemoKeyword(value);
+		if (!keyword) {
+			setSelectedKeywordId(null);
+			setResult(null);
+			return;
+		}
+		setSelectedKeywordId(keyword.id);
+		setResult(analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: keyword.id }, data));
 	}
 
 	return <section aria-labelledby="analysis-result-title" className="pc-card p-5">
@@ -47,16 +67,29 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 		<div className="mt-4 space-y-4" aria-label="分析する質問">
 			{questionGroups.map((group) => <fieldset key={group.label} className="min-w-0">
 				<legend className="mb-2 text-sm font-semibold text-slate-700">{group.label}</legend>
-				<div className="grid gap-2">
-					{group.questions.map((question) => <button
-						key={question.value}
-						type="button"
-						aria-pressed={selectedQuestion === question.value}
-						onClick={() => handleAnalyze(question.value)}
-						className={`min-h-11 rounded-xl border px-4 text-left text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky ${selectedQuestion === question.value ? 'border-brand-sky bg-brand-subtle text-brand-primary' : 'border-border-soft bg-white text-slate-700 hover:bg-slate-50'}`}
-					>
-						{question.label}
-					</button>)}
+				<div className="grid min-w-0 gap-2">
+					{group.questions.map((question) => <div key={question.value} className="min-w-0">
+						<button
+							type="button"
+							aria-pressed={selectedQuestion === question.value}
+							onClick={() => handleAnalyze(question.value)}
+							className={`min-h-11 w-full rounded-xl border px-4 text-left text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky ${selectedQuestion === question.value ? 'border-brand-sky bg-brand-subtle text-brand-primary' : 'border-border-soft bg-white text-slate-700 hover:bg-slate-50'}`}
+						>
+							{question.label}
+						</button>
+						{question.value === AnalysisQuestion.MemoKeywordDays && selectedQuestion === question.value && <div className="mt-2 min-w-0 rounded-xl border border-border-soft bg-white p-3">
+							<label htmlFor="analysis-memo-keyword" className="mb-1.5 block text-sm font-semibold text-slate-700">注目語</label>
+							<select
+								id="analysis-memo-keyword"
+								value={selectedKeywordId ?? ''}
+								onChange={(event) => handleKeywordChange(event.target.value)}
+								className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-border-soft bg-white px-3 text-base text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky"
+							>
+								<option value="">注目語を選択</option>
+								{MEMO_KEYWORDS.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.label}</option>)}
+							</select>
+						</div>}
+					</div>)}
 				</div>
 			</fieldset>)}
 		</div>
@@ -65,12 +98,13 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 			{result ? <>
 				<h3 className="text-sm font-semibold text-slate-800">{result.title}</h3>
 				<p className="mt-2 break-words text-sm leading-relaxed text-slate-700">{result.summary}</p>
+				{result.description && <p className="mt-2 break-words text-xs leading-relaxed text-slate-500">{result.description}</p>}
 				{result.facts.length > 0 && <ul className="mt-3 space-y-1.5 text-sm text-slate-600">{result.facts.map((fact) => <li key={fact} className="break-words">・{fact}</li>)}</ul>}
 				{result.note && <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs leading-relaxed text-slate-500">{result.note}</p>}
 				{result.meta !== undefined
 					? result.meta.length > 0 && <dl className="mt-3 space-y-1 text-xs text-slate-500">{result.meta.map((item) => <div key={item.label} className="flex flex-wrap gap-x-1"><dt>{item.label}：</dt><dd>{item.value}</dd></div>)}</dl>
 					: <p className="mt-3 text-xs text-slate-500">対象件数：{result.relatedLogs}件</p>}
-			</> : <p className="text-sm leading-relaxed text-slate-500">質問を選ぶと、ここに分析結果を表示します。</p>}
+			</> : <p className="text-sm leading-relaxed text-slate-500">{selectedQuestion === AnalysisQuestion.MemoKeywordDays ? '注目語を選択してください。' : '質問を選ぶと、ここに分析結果を表示します。'}</p>}
 		</div>
 	</section>;
 }

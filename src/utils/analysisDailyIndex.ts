@@ -32,6 +32,18 @@ export function buildDailyAnalysisIndex(data: AnalysisData): DailyAnalysisIndex 
 	return index;
 }
 
+export function getAnalyzableMemos(entry: DailyAnalysisEntry): string[] {
+	return [
+		...entry.poopLogs.map((log) => log.memo),
+		...entry.mealLogs.map((log) => log.memo),
+		...entry.walkLogs.map((log) => log.memo),
+		...entry.hospitalLogs.map((log) => log.memo),
+		...entry.medicationLogs.map((log) => log.memo),
+		...entry.vaccineLogs.map((log) => log.memo),
+		...entry.groomingLogs.map((log) => log.memo),
+	].filter((memo): memo is string => typeof memo === 'string' && memo.trim().length > 0);
+}
+
 function createDailyEntry(dateKey: string): DailyAnalysisEntry {
 	return {
 		dateKey,

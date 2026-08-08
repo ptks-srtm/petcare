@@ -1,8 +1,8 @@
 import type { AnalysisData, AnalysisResult } from '../types/analysis.ts';
 import type { DailyAnalysisEntry } from '../types/conditionalAnalysis.ts';
-import { buildDailyAnalysisIndex } from './analysisDailyIndex.ts';
+import { buildDailyAnalysisIndex, getAnalyzableMemos } from './analysisDailyIndex.ts';
 import { isWithinRange, startOfLocalDay } from './healthSummary.ts';
-import { countMemoKeywords } from './memoKeywords.ts';
+import { countMemoKeywords, getMemoKeyword, memoMatchesKeyword, type MemoKeywordId } from './memoKeywords.ts';
 
 const INSUFFICIENT_MESSAGE = '分析できる記録がまだ十分ではありません。';
 const LIMITED_DAYS_MESSAGE = '対象となる日が少ないため、記録の確認用としてご覧ください。';
@@ -48,7 +48,7 @@ export function analyzeNoMealDays(data: AnalysisData): AnalysisResult {
 	const poopLogs = entries.flatMap((entry) => entry.poopLogs);
 	const walkMinutes = entries.reduce((total, entry) => total + sumWalkMinutes(entry), 0);
 	const hospitalCount = entries.reduce((total, entry) => total + entry.hospitalLogs.length, 0);
-	const keywords = countMemoKeywords(entries.flatMap(entryMemos));
+	const keywords = countMemoKeywords(entries.flatMap(getAnalyzableMemos));
 
 	return {
 		title: 'ごはんを食べなかった日の記録',
@@ -67,6 +67,50 @@ export function analyzeNoMealDays(data: AnalysisData): AnalysisResult {
 		hasEnoughData: true,
 		note: entries.length === 2 ? LIMITED_DAYS_MESSAGE : undefined,
 		meta: [{ label: '集計したログ', value: `${countEntryLogs(entries)}件` }],
+	};
+}
+
+export function analyzeMemoKeywordDays(data: AnalysisData, keywordId: MemoKeywordId): AnalysisResult {
+	const keyword = getMemoKeyword(keywordId);
+	if (!keyword) return insufficientResult('メモの言葉から見る記録');
+
+	const matchedEntries = [...buildDailyAnalysisIndex(data).values()]
+		.map((entry) => ({
+			entry,
+			matchedMemos: getAnalyzableMemos(entry).filter((memo) => memoMatchesKeyword(memo, keywordId)),
+		}))
+		.filter(({ matchedMemos }) => matchedMemos.length > 0);
+	const entries = matchedEntries.map(({ entry }) => entry);
+	const matchedMemoCount = matchedEntries.reduce((total, { matchedMemos }) => total + matchedMemos.length, 0);
+	const description = `「${keyword.label}」を含むメモが記録された日の内容を集計しています。`;
+	if (entries.length < 2) {
+		return insufficientResult(`「${keyword.label}」を含むメモがある日の記録`, matchedMemoCount, description);
+	}
+
+	const poopLogs = entries.flatMap((entry) => entry.poopLogs);
+	const mealLogs = entries.flatMap((entry) => entry.mealLogs);
+	const walkMinutes = entries.reduce((total, entry) => total + sumWalkMinutes(entry), 0);
+	const hospitalCount = entries.reduce((total, entry) => total + entry.hospitalLogs.length, 0);
+	const relatedLogs = countEntryLogs(entries);
+
+	return {
+		title: `「${keyword.label}」を含むメモがある日の記録`,
+		summary: `「${keyword.label}」を含むメモがある${entries.length}日分の記録をまとめました。`,
+		description,
+		facts: [
+			`「${keyword.label}」を含むメモ：${matchedMemoCount}件`,
+			`対象日：${entries.length}日`,
+			...poopConditionFacts(poopLogs),
+			`食糞あり：${poopLogs.filter((log) => log.coprophagia).length}件`,
+			`ごはん：${mealLogs.length}件`,
+			`食べなかった：${mealLogs.filter((log) => log.intake === 'none').length}件`,
+			`さんぽ：合計${walkMinutes}分`,
+			`病院：${hospitalCount}件`,
+		],
+		relatedLogs,
+		hasEnoughData: true,
+		note: entries.length === 2 ? LIMITED_DAYS_MESSAGE : undefined,
+		meta: [{ label: '集計したログ', value: `${relatedLogs}件` }],
 	};
 }
 
@@ -112,8 +156,8 @@ export function analyzeBeforeLatestHospital(data: AnalysisData): AnalysisResult 
 	};
 }
 
-function insufficientResult(title: string, relatedLogs = 0): AnalysisResult {
-	return { title, summary: INSUFFICIENT_MESSAGE, facts: [], relatedLogs, hasEnoughData: false, meta: [] };
+function insufficientResult(title: string, relatedLogs = 0, description?: string): AnalysisResult {
+	return { title, summary: INSUFFICIENT_MESSAGE, facts: [], relatedLogs, hasEnoughData: false, description, meta: [] };
 }
 
 function poopConditionFacts(logs: readonly AnalysisData['poopLogs'][number][]) {
@@ -138,18 +182,6 @@ function countEntryLogs(entries: readonly DailyAnalysisEntry[]) {
 		+ entry.medicationLogs.length
 		+ entry.vaccineLogs.length
 		+ entry.groomingLogs.length, 0);
-}
-
-function entryMemos(entry: DailyAnalysisEntry) {
-	return [
-		...entry.poopLogs.map((log) => log.memo),
-		...entry.mealLogs.map((log) => log.memo),
-		...entry.walkLogs.map((log) => log.memo),
-		...entry.hospitalLogs.map((log) => log.memo),
-		...entry.medicationLogs.map((log) => log.memo),
-		...entry.vaccineLogs.map((log) => log.memo),
-		...entry.groomingLogs.map((log) => log.memo),
-	].filter(isNonEmptyString);
 }
 
 function isNonEmptyString(value: string | undefined): value is string {

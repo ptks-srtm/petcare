@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AnalysisQuestion, type AnalysisData } from '../types/analysis.ts';
+import { AnalysisQuestion, type AnalysisData, type AnalysisRequest } from '../types/analysis.ts';
 import { analysisEngine } from './analysisEngine.ts';
 import { buildDailyAnalysisIndex } from './analysisDailyIndex.ts';
+import { getMemoKeyword, memoMatchesKeyword } from './memoKeywords.ts';
 
 function makeData(overrides: Partial<AnalysisData> = {}): AnalysisData {
 	return {
@@ -184,4 +185,89 @@ test('新しい3分析の本文に禁止表現を含めない', () => {
 	for (const forbidden of ['原因', '関連', '関係', '影響', 'しやすい', '傾向', '改善', '悪化', '効果', '副作用', '可能性', '前兆']) {
 		assert.equal(text.includes(forbidden), false);
 	}
+});
+
+test('注目語IDを安全に取得し既存の正規化と表記揺れで照合する', () => {
+	assert.equal(getMemoKeyword('rain')?.label, '雨');
+	assert.equal(getMemoKeyword('unknown'), null);
+	assert.equal(memoMatchesKeyword('今日は雨天です', 'rain'), true);
+	assert.equal(memoMatchesKeyword('  ｻﾛﾝ  ', 'salon'), true);
+	assert.equal(memoMatchesKeyword('晴れ', 'rain'), false);
+});
+
+test('注目語条件日は同日複数メモを1日として扱い一致メモは全件数える', () => {
+	const result = analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: 'rain' }, makeData({
+		poopLogs: [
+			poop('p1', '2026-08-01T08:00', true, 'soft', '雨、雨、雨'),
+			poop('p2', '2026-08-02T08:00', false, 'normal', '雨天'),
+		],
+		mealLogs: [meal('m1', '2026-08-01T12:00', 'none', '今日は雨'), meal('m2', '2026-08-03T12:00', 'all', '雨')],
+	}));
+	assert.equal(result.hasEnoughData, true);
+	assert.equal(result.summary, '「雨」を含むメモがある3日分の記録をまとめました。');
+	assert.ok(result.facts.includes('「雨」を含むメモ：4件'));
+	assert.ok(result.facts.includes('対象日：3日'));
+	assert.equal(result.note, undefined);
+});
+
+test('注目語条件分析は対象日の記録だけを集計し体重メモを条件に含めない', () => {
+	const result = analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: 'rain' }, makeData({
+		poopLogs: [poop('p1', '2026-08-01T08:00', true, 'soft', '雨'), poop('p2', '2026-08-02T08:00', false, 'hard', '雨天'), poop('outside', '2026-08-03T08:00', true, 'normal')],
+		mealLogs: [meal('m1', '2026-08-01T12:00', 'none'), meal('outside', '2026-08-03T12:00', 'none')],
+		walkLogs: [{ id: 'w1', datetime: '2026-08-02T18:00', durationMinutes: 25 }, { id: 'outside', datetime: '2026-08-03T18:00', durationMinutes: 99 }],
+		hospitalLogs: [{ id: 'h1', datetime: '2026-08-02T10:00' }],
+		weightLogs: [{ id: 'weight-memo', datetime: '2026-08-04T10:00', weightKg: 6, memo: '雨' }],
+	}));
+	assert.ok(result.facts.includes('やわらかめ：1件'));
+	assert.ok(result.facts.includes('かため：1件'));
+	assert.ok(result.facts.includes('ふつう：0件'));
+	assert.ok(result.facts.includes('食糞あり：1件'));
+	assert.ok(result.facts.includes('ごはん：1件'));
+	assert.ok(result.facts.includes('食べなかった：1件'));
+	assert.ok(result.facts.includes('さんぽ：合計25分'));
+	assert.ok(result.facts.includes('病院：1件'));
+	assert.deepEqual(result.meta, [{ label: '集計したログ', value: '5件' }]);
+});
+
+test('注目語条件分析は不正日時を除外し0日・1日を不足、2日を少数表示にする', () => {
+	const zero = analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: 'rain' }, makeData());
+	assert.equal(zero.hasEnoughData, false);
+	assert.deepEqual(zero.meta, []);
+
+	const one = analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: 'rain' }, makeData({
+		poopLogs: [poop('valid', '2026-08-01T08:00', false, 'normal', '雨'), poop('invalid', 'invalid', false, 'normal', '雨')],
+	}));
+	assert.equal(one.hasEnoughData, false);
+	assert.deepEqual(one.meta, []);
+
+	const two = analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: 'rain' }, makeData({
+		poopLogs: [poop('p1', '2026-08-01T08:00', false, 'normal', '雨'), poop('p2', '2026-08-02T08:00', false, 'normal', '雨')],
+	}));
+	assert.equal(two.hasEnoughData, true);
+	assert.equal(two.note, '対象となる日が少ないため、記録の確認用としてご覧ください。');
+});
+
+test('注目語条件分析は説明・metaを持ち禁止表現を使用しない', () => {
+	const result = analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: 'rain' }, makeData({
+		poopLogs: [poop('p1', '2026-08-01T08:00', false, 'normal', '雨'), poop('p2', '2026-08-02T08:00', false, 'normal', '雨')],
+	}));
+	assert.equal(result.description, '「雨」を含むメモが記録された日の内容を集計しています。');
+	assert.deepEqual(result.meta, [{ label: '集計したログ', value: '2件' }]);
+	const text = [result.title, result.summary, result.description ?? '', ...result.facts, result.note ?? '', ...(result.meta ?? []).flatMap((item) => [item.label, item.value])].join(' ');
+	for (const forbidden of ['原因', '関連', '関係', '影響', '傾向', 'しやすい', '確率', '改善', '悪化', '効果', '副作用', '可能性', '前兆']) {
+		assert.equal(text.includes(forbidden), false);
+	}
+});
+
+test('不正なkeywordIdは例外にせず安全な不足結果を返す', () => {
+	const request = { question: AnalysisQuestion.MemoKeywordDays, keywordId: 'unknown' } as unknown as AnalysisRequest;
+	const result = analysisEngine.analyzeRequest(request, makeData());
+	assert.equal(result.hasEnoughData, false);
+	assert.deepEqual(result.meta, []);
+});
+
+test('既存12質問は従来のanalyze入口から実行できる', () => {
+	const existingQuestions = Object.values(AnalysisQuestion).filter((question) => question !== AnalysisQuestion.MemoKeywordDays);
+	assert.equal(existingQuestions.length, 12);
+	for (const question of existingQuestions) assert.doesNotThrow(() => analysisEngine.analyze(question, makeData()));
 });

@@ -1,7 +1,7 @@
-import { AnalysisQuestion, type AnalysisData, type AnalysisEngine, type AnalysisResult } from '../types/analysis.ts';
+import { AnalysisQuestion, type AnalysisData, type AnalysisEngine, type AnalysisRequest, type AnalysisResult } from '../types/analysis.ts';
 import { getLocalDayRange, isWithinRange } from './healthSummary.ts';
-import { analyzeBeforeLatestHospital, analyzeCoprophagiaDays, analyzeNoMealDays } from './conditionalAnalysis.ts';
-import { countMemoKeywords } from './memoKeywords.ts';
+import { analyzeBeforeLatestHospital, analyzeCoprophagiaDays, analyzeMemoKeywordDays, analyzeNoMealDays } from './conditionalAnalysis.ts';
+import { countMemoKeywords, getMemoKeyword } from './memoKeywords.ts';
 
 export const INSUFFICIENT_ANALYSIS_MESSAGE = '分析できる記録がまだ十分ではありません。';
 export const LIMITED_SAMPLE_MESSAGE = '記録数が少ないため、参考としてご覧ください。';
@@ -19,6 +19,7 @@ const titles: Record<AnalysisQuestion, string> = {
 	[AnalysisQuestion.CoprophagiaDaySummary]: '食糞ありの日の記録',
 	[AnalysisQuestion.NoMealDaySummary]: 'ごはんを食べなかった日の記録',
 	[AnalysisQuestion.BeforeLatestHospital]: '最新の病院受診前の記録',
+	[AnalysisQuestion.MemoKeywordDays]: 'メモの言葉から見る記録',
 };
 
 export const analysisEngine: AnalysisEngine = {
@@ -49,11 +50,32 @@ export const analysisEngine: AnalysisEngine = {
 				return analyzeNoMealDays(data);
 			case AnalysisQuestion.BeforeLatestHospital:
 				return analyzeBeforeLatestHospital(data);
+			case AnalysisQuestion.MemoKeywordDays:
+				return parameterRequiredResult();
 			default:
 				return insufficientResult(titles[question]);
 		}
 	},
+	analyzeRequest(request: AnalysisRequest, data: AnalysisData, options = {}) {
+		if (request.question === AnalysisQuestion.MemoKeywordDays) {
+			const keyword = getMemoKeyword(request.keywordId);
+			if (!keyword) return parameterRequiredResult();
+			return analyzeMemoKeywordDays(data, keyword.id);
+		}
+		return analysisEngine.analyze(request.question, data, options);
+	},
 };
+
+function parameterRequiredResult(): AnalysisResult {
+	return {
+		title: titles[AnalysisQuestion.MemoKeywordDays],
+		summary: INSUFFICIENT_ANALYSIS_MESSAGE,
+		facts: [],
+		relatedLogs: 0,
+		hasEnoughData: false,
+		meta: [],
+	};
+}
 
 function analyzeCoprophagiaTime(data: AnalysisData): AnalysisResult {
 	const logs = data.poopLogs.filter((log) => log.coprophagia && isValidDate(log.datetime));
