@@ -17,9 +17,17 @@ export const AnalysisQuestion = {
 	HospitalSummary: 'hospital_summary',
 	CareSummary: 'care_summary',
 	MemoKeywords: 'memo_keywords',
+	CoprophagiaDaySummary: 'coprophagia_day_summary',
+	NoMealDaySummary: 'no_meal_day_summary',
+	BeforeLatestHospital: 'before_latest_hospital',
 } as const;
 
 export type AnalysisQuestion = (typeof AnalysisQuestion)[keyof typeof AnalysisQuestion];
+
+export type AnalysisResultMetaItem = {
+	label: string;
+	value: string;
+};
 
 export type AnalysisResult = {
 	title: string;
@@ -28,6 +36,7 @@ export type AnalysisResult = {
 	relatedLogs: number;
 	hasEnoughData: boolean;
 	note?: string;
+	meta?: AnalysisResultMetaItem[];
 };
 
 export type AnalysisData = {

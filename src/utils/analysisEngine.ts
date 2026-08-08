@@ -1,5 +1,7 @@
 import { AnalysisQuestion, type AnalysisData, type AnalysisEngine, type AnalysisResult } from '../types/analysis.ts';
 import { getLocalDayRange, isWithinRange } from './healthSummary.ts';
+import { analyzeBeforeLatestHospital, analyzeCoprophagiaDays, analyzeNoMealDays } from './conditionalAnalysis.ts';
+import { countMemoKeywords } from './memoKeywords.ts';
 
 export const INSUFFICIENT_ANALYSIS_MESSAGE = '分析できる記録がまだ十分ではありません。';
 export const LIMITED_SAMPLE_MESSAGE = '記録数が少ないため、参考としてご覧ください。';
@@ -14,36 +16,10 @@ const titles: Record<AnalysisQuestion, string> = {
 	[AnalysisQuestion.HospitalSummary]: '病院の記録',
 	[AnalysisQuestion.CareSummary]: 'ケアの記録',
 	[AnalysisQuestion.MemoKeywords]: 'メモでよく記録されていること',
+	[AnalysisQuestion.CoprophagiaDaySummary]: '食糞ありの日の記録',
+	[AnalysisQuestion.NoMealDaySummary]: 'ごはんを食べなかった日の記録',
+	[AnalysisQuestion.BeforeLatestHospital]: '最新の病院受診前の記録',
 };
-
-type MemoKeywordDefinition = {
-	id: string;
-	label: string;
-	patterns: readonly string[];
-};
-
-const MEMO_KEYWORDS: readonly MemoKeywordDefinition[] = [
-	{ id: 'morning', label: '朝', patterns: ['朝'] },
-	{ id: 'night', label: '夜', patterns: ['夜'] },
-	{ id: 'rain', label: '雨', patterns: ['雨', '雨天'] },
-	{ id: 'snow', label: '雪', patterns: ['雪'] },
-	{ id: 'hot', label: '暑い', patterns: ['暑い'] },
-	{ id: 'cold', label: '寒い', patterns: ['寒い'] },
-	{ id: 'thunder', label: '雷', patterns: ['雷'] },
-	{ id: 'home-alone', label: '留守番', patterns: ['留守番'] },
-	{ id: 'visitor', label: '来客', patterns: ['来客'] },
-	{ id: 'travel', label: '旅行', patterns: ['旅行'] },
-	{ id: 'park', label: '公園', patterns: ['公園'] },
-	{ id: 'dog-run', label: 'ドッグラン', patterns: ['ドッグラン'] },
-	{ id: 'hospital', label: '病院', patterns: ['病院'] },
-	{ id: 'salon', label: 'サロン', patterns: ['サロン'] },
-	{ id: 'snack', label: 'おやつ', patterns: ['おやつ'] },
-	{ id: 'short-walk', label: '散歩短め', patterns: ['散歩短め', '散歩が短め', '散歩は短め'] },
-	{ id: 'walk', label: '散歩', patterns: ['散歩'] },
-	{ id: 'exercise', label: '運動', patterns: ['運動'] },
-	{ id: 'meal', label: 'ごはん', patterns: ['ごはん'] },
-	{ id: 'medicine', label: '薬', patterns: ['薬'] },
-];
 
 export const analysisEngine: AnalysisEngine = {
 	analyze(question, data, options = {}) {
@@ -67,6 +43,12 @@ export const analysisEngine: AnalysisEngine = {
 				return analyzeHospitalSummary(data);
 			case AnalysisQuestion.CareSummary:
 				return analyzeCareSummary(data);
+			case AnalysisQuestion.CoprophagiaDaySummary:
+				return analyzeCoprophagiaDays(data);
+			case AnalysisQuestion.NoMealDaySummary:
+				return analyzeNoMealDays(data);
+			case AnalysisQuestion.BeforeLatestHospital:
+				return analyzeBeforeLatestHospital(data);
 			default:
 				return insufficientResult(titles[question]);
 		}
@@ -189,20 +171,7 @@ function analyzeMemoKeywords(data: AnalysisData): AnalysisResult {
 	].filter((memo): memo is string => typeof memo === 'string' && memo.trim().length > 0);
 	if (memos.length < 2) return insufficientResult(titles[AnalysisQuestion.MemoKeywords], memos.length);
 
-	const counts = new Map<string, number>();
-	for (const memo of memos) {
-		const normalizedMemo = normalizeMemoText(memo);
-		const matchedIds = new Set<string>();
-		for (const keyword of MEMO_KEYWORDS) {
-			if (keyword.patterns.some((pattern) => normalizedMemo.includes(normalizeMemoText(pattern)))) matchedIds.add(keyword.id);
-		}
-		for (const id of matchedIds) counts.set(id, (counts.get(id) ?? 0) + 1);
-	}
-	const keywords = MEMO_KEYWORDS
-		.map((keyword) => ({ ...keyword, count: counts.get(keyword.id) ?? 0 }))
-		.filter((keyword) => keyword.count > 0)
-		.sort((a, b) => b.count - a.count)
-		.slice(0, 5);
+	const keywords = countMemoKeywords(memos);
 	if (keywords.length === 0) return insufficientResult(titles[AnalysisQuestion.MemoKeywords], memos.length);
 	const maximum = keywords[0].count;
 	const topLabels = keywords.filter((keyword) => keyword.count === maximum).map((keyword) => `「${keyword.label}」`);
@@ -301,10 +270,6 @@ function formatWeight(value: number) {
 
 function formatAverage(value: number) {
 	return new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
-}
-
-function normalizeMemoText(value: string) {
-	return value.normalize('NFKC').toLowerCase().trim();
 }
 
 function formatAnalysisDate(datetime: string) {
