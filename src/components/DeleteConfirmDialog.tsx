@@ -12,22 +12,29 @@ export type DeleteConfirmDialogProps = {
 export function DeleteConfirmDialog({ onCancel, onConfirm, title = 'この記録を削除しますか？', description = '削除すると元に戻せません', confirmLabel = '削除する', tone = 'danger' }: DeleteConfirmDialogProps) {
 	const cancelButtonRef = useRef<HTMLButtonElement>(null);
 	const deleteButtonRef = useRef<HTMLButtonElement>(null);
+	const onCancelRef = useRef(onCancel);
+
+	onCancelRef.current = onCancel;
 
 	useEffect(() => {
+		const returnFocusTarget = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		const previousOverflow = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
 		cancelButtonRef.current?.focus();
 
 		function handleEscape(event: globalThis.KeyboardEvent) {
-			if (event.key === 'Escape') onCancel();
+			if (event.key === 'Escape') onCancelRef.current();
 		}
 
 		document.addEventListener('keydown', handleEscape);
 		return () => {
 			document.body.style.overflow = previousOverflow;
 			document.removeEventListener('keydown', handleEscape);
+			requestAnimationFrame(() => {
+				if (returnFocusTarget?.isConnected) returnFocusTarget.focus();
+			});
 		};
-	}, [onCancel]);
+	}, []);
 
 	function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
 		if (event.key !== 'Tab') return;

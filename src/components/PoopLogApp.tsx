@@ -34,10 +34,15 @@ import { WeightForm } from './WeightForm';
 import { MedicationForm } from './MedicationForm';
 import { VaccineForm } from './VaccineForm';
 import { GroomingForm } from './GroomingForm';
+import { FirstUseGuide } from './FirstUseGuide';
+import { isFirstUse } from '../utils/firstUse';
+import { loadPetProfile } from '../utils/profileStorage';
+import { checkStorageAvailability, type StorageAvailabilityStatus } from '../utils/storageAvailability';
 
 type Feedback = { message: string; isError?: boolean } | null;
 type RecorderKind = HealthLogKind;
 const CARE_LOG_KINDS = new Set<HealthLogKind>(['hospital', 'medication', 'vaccine', 'weight', 'grooming']);
+const SAVE_FAILURE_MESSAGE = '保存できませんでした。ブラウザの保存領域やプライベートブラウズ設定を確認してください。';
 
 function createId() {
 	if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
@@ -71,6 +76,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const [editingTarget, setEditingTarget] = useState<HealthLogTarget | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<HealthLogTarget | null>(null);
 	const [hasLoaded, setHasLoaded] = useState(false);
+	const [storageStatus, setStorageStatus] = useState<StorageAvailabilityStatus | null>(null);
 	const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const formSectionRef = useRef<HTMLElement>(null);
 	const editingPoopLog = editingTarget?.kind === 'poop' ? poopLogs.find((log) => log.id === editingTarget.id) : undefined;
@@ -84,6 +90,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog || editingHospitalLog || editingWeightLog || editingMedicationLog || editingVaccineLog || editingGroomingLog);
 
 	useEffect(() => {
+		setStorageStatus(checkStorageAvailability());
 		setPoopLogs(sortLogsNewestFirst(loadPoopLogs()));
 		setMealLogs(sortLogsNewestFirst(loadMealLogs()));
 		setWalkLogs(sortLogsNewestFirst(loadWalkLogs()));
@@ -125,7 +132,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		if (editingTarget?.kind === 'poop') {
 			const updatedLogs = updatePoopLog(poopLogs, { ...input, id: editingTarget.id });
 			if (!updatedLogs) {
-				showFeedback('保存できませんでした', true);
+				showFeedback(SAVE_FAILURE_MESSAGE, true);
 				return false;
 			}
 			setPoopLogs(sortLogsNewestFirst(updatedLogs));
@@ -138,7 +145,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		const nextLog: PoopLog = { ...input, id: createId() };
 		const nextLogs = sortLogsNewestFirst([nextLog, ...poopLogs]);
 		if (!savePoopLogs(nextLogs)) {
-			showFeedback('保存できませんでした', true);
+			showFeedback(SAVE_FAILURE_MESSAGE, true);
 			return false;
 		}
 		setPoopLogs(nextLogs);
@@ -152,7 +159,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		if (editingTarget?.kind === 'meal') {
 			const updatedLogs = updateMealLog(mealLogs, { ...input, id: editingTarget.id });
 			if (!updatedLogs) {
-				showFeedback('保存できませんでした', true);
+				showFeedback(SAVE_FAILURE_MESSAGE, true);
 				return false;
 			}
 			setMealLogs(sortLogsNewestFirst(updatedLogs));
@@ -165,7 +172,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		const nextLog: MealLog = { ...input, id: createId() };
 		const nextLogs = sortLogsNewestFirst([nextLog, ...mealLogs]);
 		if (!saveMealLogs(nextLogs)) {
-			showFeedback('保存できませんでした', true);
+			showFeedback(SAVE_FAILURE_MESSAGE, true);
 			return false;
 		}
 		setMealLogs(nextLogs);
@@ -179,7 +186,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		if (editingTarget?.kind === 'walk') {
 			const updatedLogs = updateWalkLog(walkLogs, { ...input, id: editingTarget.id });
 			if (!updatedLogs) {
-				showFeedback('保存できませんでした', true);
+				showFeedback(SAVE_FAILURE_MESSAGE, true);
 				return false;
 			}
 			setWalkLogs(sortLogsNewestFirst(updatedLogs));
@@ -192,7 +199,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		const nextLog: WalkLog = { ...input, id: createId() };
 		const nextLogs = sortLogsNewestFirst([nextLog, ...walkLogs]);
 		if (!saveWalkLogs(nextLogs)) {
-			showFeedback('保存できませんでした', true);
+			showFeedback(SAVE_FAILURE_MESSAGE, true);
 			return false;
 		}
 		setWalkLogs(nextLogs);
@@ -206,7 +213,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		if (editingTarget?.kind === 'hospital') {
 			const updatedLogs = updateHospitalLog(hospitalLogs, { ...input, id: editingTarget.id });
 			if (!updatedLogs) {
-				showFeedback('保存できませんでした', true);
+				showFeedback(SAVE_FAILURE_MESSAGE, true);
 				return false;
 			}
 			setHospitalLogs(sortLogsNewestFirst(updatedLogs));
@@ -219,7 +226,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		const nextLog: HospitalLog = { ...input, id: createId() };
 		const nextLogs = sortLogsNewestFirst([nextLog, ...hospitalLogs]);
 		if (!saveHospitalLogs(nextLogs)) {
-			showFeedback('保存できませんでした', true);
+			showFeedback(SAVE_FAILURE_MESSAGE, true);
 			return false;
 		}
 		setHospitalLogs(nextLogs);
@@ -233,7 +240,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		if (editingTarget?.kind === 'weight') {
 			const updatedLogs = updateWeightLog(weightLogs, { ...input, id: editingTarget.id });
 			if (!updatedLogs) {
-				showFeedback('保存できませんでした', true);
+				showFeedback(SAVE_FAILURE_MESSAGE, true);
 				return false;
 			}
 			setWeightLogs(sortLogsNewestFirst(updatedLogs));
@@ -246,7 +253,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		const nextLog: WeightLog = { ...input, id: createId() };
 		const nextLogs = sortLogsNewestFirst([nextLog, ...weightLogs]);
 		if (!saveWeightLogs(nextLogs)) {
-			showFeedback('保存できませんでした', true);
+			showFeedback(SAVE_FAILURE_MESSAGE, true);
 			return false;
 		}
 		setWeightLogs(nextLogs);
@@ -259,33 +266,33 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	function handleSubmitMedicationLog(input: NewMedicationLog) {
 		if (editingTarget?.kind === 'medication') {
 			const updated = updateMedicationLog(medicationLogs, { ...input, id: editingTarget.id });
-			if (!updated) { showFeedback('保存できませんでした', true); return false; }
+			if (!updated) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
 			setMedicationLogs(sortLogsNewestFirst(updated)); notifyLogsChanged(); setEditingTarget(null); showFeedback('更新しました'); return true;
 		}
 		const nextLogs = sortLogsNewestFirst([{ ...input, id: createId() }, ...medicationLogs]);
-		if (!saveMedicationLogs(nextLogs)) { showFeedback('保存できませんでした', true); return false; }
+		if (!saveMedicationLogs(nextLogs)) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
 		setMedicationLogs(nextLogs); notifyLogsChanged(); setActiveRecorder(null); showFeedback('記録しました'); return true;
 	}
 
 	function handleSubmitVaccineLog(input: NewVaccineLog) {
 		if (editingTarget?.kind === 'vaccine') {
 			const updated = updateVaccineLog(vaccineLogs, { ...input, id: editingTarget.id });
-			if (!updated) { showFeedback('保存できませんでした', true); return false; }
+			if (!updated) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
 			setVaccineLogs(sortLogsNewestFirst(updated)); notifyLogsChanged(); setEditingTarget(null); showFeedback('更新しました'); return true;
 		}
 		const nextLogs = sortLogsNewestFirst([{ ...input, id: createId() }, ...vaccineLogs]);
-		if (!saveVaccineLogs(nextLogs)) { showFeedback('保存できませんでした', true); return false; }
+		if (!saveVaccineLogs(nextLogs)) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
 		setVaccineLogs(nextLogs); notifyLogsChanged(); setActiveRecorder(null); showFeedback('記録しました'); return true;
 	}
 
 	function handleSubmitGroomingLog(input: NewGroomingLog) {
 		if (editingTarget?.kind === 'grooming') {
 			const updated = updateGroomingLog(groomingLogs, { ...input, id: editingTarget.id });
-			if (!updated) { showFeedback('保存できませんでした', true); return false; }
+			if (!updated) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
 			setGroomingLogs(sortLogsNewestFirst(updated)); notifyLogsChanged(); setEditingTarget(null); showFeedback('更新しました'); return true;
 		}
 		const nextLogs = sortLogsNewestFirst([{ ...input, id: createId() }, ...groomingLogs]);
-		if (!saveGroomingLogs(nextLogs)) { showFeedback('保存できませんでした', true); return false; }
+		if (!saveGroomingLogs(nextLogs)) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
 		setGroomingLogs(nextLogs); notifyLogsChanged(); setActiveRecorder(null); showFeedback('記録しました'); return true;
 	}
 
@@ -340,7 +347,8 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const todaySummary = getTodaySummary(poopLogs, mealLogs, walkLogs);
 	const weeklySummary = getLast7DaysSummary(poopLogs, mealLogs, walkLogs);
 	const healthInsight = getHealthInsight(todaySummary, weeklySummary);
-	const FormHeading = isHistory ? 'h2' : 'h1';
+	const firstUse = isFirstUse({ poopLogs, mealLogs, walkLogs, hospitalLogs, weightLogs, medicationLogs, vaccineLogs, groomingLogs });
+	const FormHeading = 'h2';
 	const editKindLabel = editingTarget ? `${LOG_TYPE_META[editingTarget.kind].label}ログ` : '記録';
 
 	const recorderGroups = [
@@ -383,9 +391,11 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		<>
 			{!hasLoaded && <div aria-label="健康記録を読み込み中" className="space-y-5"><div className="pc-card pc-skeleton h-64 p-5" /><div className="pc-card pc-skeleton h-40 p-5" /></div>}
 
-			{hasLoaded && (!isHistory || isEditing) && <section ref={formSectionRef} tabIndex={-1} aria-labelledby="new-log-title" className="pc-card min-w-0 max-w-full scroll-mt-4 p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand-sky">
+			{hasLoaded && !isHistory && firstUse && storageStatus?.status === 'available' && <FirstUseGuide hasProfile={Boolean(loadPetProfile())} />}
+
+			{hasLoaded && (!isHistory || isEditing) && <section ref={formSectionRef} tabIndex={-1} aria-labelledby="today-record-title" className="pc-card min-w-0 max-w-full p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand-sky">
 				<div className="mb-4">
-					<FormHeading id="new-log-title" className="text-xl font-semibold tracking-tight text-slate-800">{isEditing ? `${editKindLabel}の編集` : '今日の記録'}</FormHeading>
+					<FormHeading id="today-record-title" className="text-xl font-semibold tracking-tight text-slate-800">{isEditing ? `${editKindLabel}の編集` : '今日の記録'}</FormHeading>
 					<p className="mt-1 text-sm leading-relaxed text-slate-500">{isEditing ? '内容を確認して更新できます' : '記録したい項目を選んでください'}</p>
 				</div>
 
@@ -434,7 +444,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 				{!isHistory && <div className="mb-4 flex items-center justify-between gap-4 px-1"><h2 id="log-list-title" className="text-xl font-semibold leading-snug tracking-tight text-slate-800">最近の記録</h2><a href="/logs" className="shrink-0 text-sm font-semibold text-brand-blue transition hover:text-brand-sky focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky">すべて見る</a></div>}
 				{isHistory && <h2 id="log-list-title" className="sr-only">日付ごとの健康記録</h2>}
 
-				{combinedLogs.length > 0 ? <LogList logs={visibleLogs} onEdit={handleStartEdit} onRequestDelete={setDeleteTarget} /> : <EmptyState description={isHistory ? 'ホームから最初の記録を追加してみましょう。' : '上のメニューから最初の記録を追加してみましょう。'} action={isHistory ? <a href="/#new-log-title" className="pc-button-primary px-5 text-sm">記録する</a> : undefined} />}
+				{combinedLogs.length > 0 ? <LogList logs={visibleLogs} onEdit={handleStartEdit} onRequestDelete={setDeleteTarget} /> : <EmptyState title="まだ記録はありません" description={isHistory ? '記録はホームから追加できます。最初の記録を残してみましょう。' : '上の毎日の記録から、最初の記録を追加してみましょう。'} action={isHistory ? <a href="/#new-log-title" className="pc-button-primary px-5 text-sm">ホームで記録する</a> : undefined} />}
 			</section>}
 
 			{deleteTarget && <DeleteConfirmDialog onCancel={() => setDeleteTarget(null)} onConfirm={handleConfirmDelete} />}

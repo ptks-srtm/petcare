@@ -121,7 +121,7 @@ export function PetProfileForm() {
 		};
 
 		if (!savePetProfile(profile)) {
-			setErrors({ form: 'プロフィールを保存できませんでした。画像の容量が大きすぎる可能性があります' });
+			setErrors({ form: 'プロフィールを保存できませんでした。画像のサイズ、ブラウザの保存領域、プライベートブラウズ設定を確認してください' });
 			setIsSubmitting(false);
 			return;
 		}
@@ -137,7 +137,7 @@ export function PetProfileForm() {
 	return (
 		<>
 			<div className="mb-6 px-1">
-				<a href="/settings" className="mb-4 inline-flex min-h-10 items-center gap-1 rounded-xl pr-3 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky"><ChevronLeft size={18} aria-hidden="true" />設定へ戻る</a>
+				<a href="/settings" className="mb-4 inline-flex min-h-11 items-center gap-1 rounded-xl pr-3 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky"><ChevronLeft size={18} aria-hidden="true" />設定へ戻る</a>
 				<h1 className="text-2xl font-semibold tracking-tight text-slate-800">{existingProfile ? 'プロフィール編集' : 'プロフィール登録'}</h1>
 				<p className="mt-1.5 text-sm text-slate-500">ペットの基本情報を登録します</p>
 			</div>
