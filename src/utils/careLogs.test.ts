@@ -15,8 +15,8 @@ const medication: MedicationLog = { id: 'm1', datetime: '2026-08-01T10:00', medi
 const vaccine: VaccineLog = { id: 'v1', datetime: '2026-08-01T11:00', vaccineName: '混合ワクチン', costYen: 0, nextVaccinationDate: '2027-08-01' };
 const grooming: GroomingLog = { id: 'g1', datetime: '2026-08-01T12:00', services: ['shampoo', 'nailTrim'], location: 'salon', costYen: 5000 };
 
-function backup(version = '1.5.0') {
-	return { version, exportedAt: '2026-08-01T00:00:00.000Z', data: { profile: null, poopLogs: [], mealLogs: [], walkLogs: [], hospitalLogs: [], weightLogs: [], medicationLogs: [medication], vaccineLogs: [vaccine], groomingLogs: [grooming], poopLocationOptions: [] } };
+function backup(version = '1.6.0') {
+	return { version, exportedAt: '2026-08-01T00:00:00.000Z', data: { profile: null, poopLogs: [], mealLogs: [], walkLogs: [], hospitalLogs: [], weightLogs: [], medicationLogs: [medication], vaccineLogs: [vaccine], groomingLogs: [grooming], poopLocationOptions: [], customKeywords: [{ id: 'custom:home', label: '実家', patterns: ['実家'] }] } };
 }
 
 test('datetime-local形式の実在日時だけを受理する', () => {
@@ -59,25 +59,26 @@ test('お手入れログを検証・正規化する', () => {
 	assert.equal(isGroomingLog({ ...grooming, datetime: '2026-02-29T10:00' }), false);
 });
 
-test('旧バックアップは新3配列を空配列で補完する', () => {
-	for (const version of ['0.13.0', '0.14.0', '0.15.0', '1.0.0', '1.1.0', '1.2.0']) {
+test('旧バックアップは新しい配列を空配列で補完する', () => {
+	for (const version of ['0.13.0', '0.14.0', '0.15.0', '1.0.0', '1.1.0', '1.2.0', '1.5.0']) {
 		const candidate = backup(version);
-		delete (candidate.data as Partial<typeof candidate.data>).medicationLogs;
-		delete (candidate.data as Partial<typeof candidate.data>).vaccineLogs;
-		delete (candidate.data as Partial<typeof candidate.data>).groomingLogs;
-		if (version !== '1.1.0' && version !== '1.2.0') delete (candidate.data as Partial<typeof candidate.data>).hospitalLogs;
-		if (version !== '1.2.0') delete (candidate.data as Partial<typeof candidate.data>).weightLogs;
+		delete (candidate.data as Partial<typeof candidate.data>).customKeywords;
+		if (version !== '1.5.0') {
+			delete (candidate.data as Partial<typeof candidate.data>).medicationLogs;
+			delete (candidate.data as Partial<typeof candidate.data>).vaccineLogs;
+			delete (candidate.data as Partial<typeof candidate.data>).groomingLogs;
+		}
+		if (!['1.1.0', '1.2.0', '1.5.0'].includes(version)) delete (candidate.data as Partial<typeof candidate.data>).hospitalLogs;
+		if (!['1.2.0', '1.5.0'].includes(version)) delete (candidate.data as Partial<typeof candidate.data>).weightLogs;
 		const parsed = parsePetCareBackup(JSON.stringify(candidate));
 		assert.ok(parsed, version);
-		assert.deepEqual(parsed.data.medicationLogs, []);
-		assert.deepEqual(parsed.data.vaccineLogs, []);
-		assert.deepEqual(parsed.data.groomingLogs, []);
+		assert.deepEqual(parsed.data.customKeywords, []);
 	}
 });
 
-test('1.5.0バックアップは新配列を厳格に検証する', () => {
+test('1.6.0バックアップは全追加配列を厳格に検証する', () => {
 	assert.ok(parsePetCareBackup(JSON.stringify(backup())));
-	for (const key of ['medicationLogs', 'vaccineLogs', 'groomingLogs'] as const) {
+	for (const key of ['medicationLogs', 'vaccineLogs', 'groomingLogs', 'customKeywords'] as const) {
 		const missing = backup(); delete (missing.data as Partial<typeof missing.data>)[key];
 		assert.equal(parsePetCareBackup(JSON.stringify(missing)), null);
 		const nonArray = backup(); (nonArray.data as Record<string, unknown>)[key] = {};
@@ -87,6 +88,48 @@ test('1.5.0バックアップは新配列を厳格に検証する', () => {
 	assert.equal(parsePetCareBackup(JSON.stringify(invalid)), null);
 	const invalidDatetime = backup(); invalidDatetime.data.medicationLogs = [{ ...medication, datetime: '2026-02-30T10:00' }];
 	assert.equal(parsePetCareBackup(JSON.stringify(invalidDatetime)), null);
+	const invalidKeyword = backup(); invalidKeyword.data.customKeywords = [{ id: 'custom:bad', label: '   ', patterns: ['   '] }];
+	assert.equal(parsePetCareBackup(JSON.stringify(invalidKeyword)), null);
+});
+
+test('1.6.0バックアップのcustomKeywords不正条件を個別に拒否する', () => {
+	const makeKeyword = (index: number) => ({ id: `custom:${index}`, label: `語${index}`, patterns: [`語${index}`] });
+	const cases: Array<[string, unknown]> = [
+		['31件', Array.from({ length: 31 }, (_, index) => makeKeyword(index))],
+		['空label', [{ id: 'custom:empty', label: '', patterns: [''] }]],
+		['21文字label', [{ id: 'custom:long', label: 'あ'.repeat(21), patterns: ['あ'.repeat(21)] }]],
+		['patterns非配列', [{ id: 'custom:patterns', label: '実家', patterns: '実家' }]],
+		['patterns不一致', [{ id: 'custom:patterns', label: '実家', patterns: ['帰省先'] }]],
+		['prefixなし', [{ id: 'home', label: '実家', patterns: ['実家'] }]],
+		['ID重複', [makeKeyword(0), { ...makeKeyword(1), id: 'custom:0' }]],
+		['標準語重複', [{ id: 'custom:rain', label: '雨', patterns: ['雨'] }]],
+		['カスタム語重複', [makeKeyword(0), { ...makeKeyword(1), label: '語0', patterns: ['語0'] }]],
+		['NFKC重複', [
+			{ id: 'custom:wide', label: 'ＡＢＣ', patterns: ['ＡＢＣ'] },
+			{ id: 'custom:narrow', label: 'ABC', patterns: ['ABC'] },
+		]],
+		['大文字小文字重複', [
+			{ id: 'custom:upper', label: 'ABC', patterns: ['ABC'] },
+			{ id: 'custom:lower', label: 'abc', patterns: ['abc'] },
+		]],
+	];
+	for (const [name, customKeywords] of cases) {
+		const candidate = backup();
+		(candidate.data as Record<string, unknown>).customKeywords = customKeywords;
+		assert.equal(parsePetCareBackup(JSON.stringify(candidate)), null, name);
+	}
+});
+
+test('正常な1.6.0バックアップはcustomKeywords空配列と複数件を受理する', () => {
+	const empty = backup();
+	empty.data.customKeywords = [];
+	assert.deepEqual(parsePetCareBackup(JSON.stringify(empty))?.data.customKeywords, []);
+	const multiple = backup();
+	multiple.data.customKeywords = [
+		{ id: 'custom:home', label: '実家', patterns: ['実家'] },
+		{ id: 'custom:trip', label: '旅行前', patterns: ['旅行前'] },
+	];
+	assert.deepEqual(parsePetCareBackup(JSON.stringify(multiple))?.data.customKeywords, multiple.data.customKeywords);
 });
 
 test('不正日時のバックアップ拒否時はlocalStorageへ書き込まない', () => {
@@ -100,14 +143,41 @@ test('不正日時のバックアップ拒否時はlocalStorageへ書き込ま�
 	delete (globalThis as { window?: unknown }).window;
 });
 
+test('不正なcustomKeywordsは復元前に拒否し既存localStorageへ書き込まない', () => {
+	const initial = new Map<string, string>([
+		['petcare:profile', '{"name":"既存"}'],
+		['petcare:poop-logs', '[{"existing":true}]'],
+		['petcare:meal-logs', '[{"existing":true}]'],
+		['petcare:custom-keywords', '[{"id":"custom:old","label":"実家","patterns":["実家"]}]'],
+	]);
+	const values = new Map(initial);
+	let writes = 0;
+	const storage = {
+		get length() { return values.size; },
+		clear() { writes += 1; values.clear(); },
+		key(index: number) { return [...values.keys()][index] ?? null; },
+		getItem(key: string) { return values.get(key) ?? null; },
+		removeItem(key: string) { writes += 1; values.delete(key); },
+		setItem(key: string, value: string) { writes += 1; values.set(key, value); },
+	} satisfies Storage;
+	Object.defineProperty(globalThis, 'window', { configurable: true, value: { localStorage: storage, dispatchEvent() { return true; } } });
+	const invalid = backup();
+	invalid.data.customKeywords = [{ id: 'custom:bad', label: '実家', patterns: ['別名'] }];
+	const parsed = parsePetCareBackup(JSON.stringify(invalid));
+	assert.equal(parsed, null);
+	assert.equal(writes, 0);
+	assert.deepEqual(values, initial);
+	delete (globalThis as { window?: unknown }).window;
+});
+
 test('新3種類を日時順・kind付きで統合する', () => {
 	const logs = combineHealthLogs([], [], [], [], [], [medication], [vaccine], [grooming]);
 	assert.deepEqual(logs.map((entry) => entry.kind), ['grooming', 'vaccine', 'medication']);
 	assert.notEqual(getHealthLogKey({ kind: 'medication', id: 'same' }), getHealthLogKey({ kind: 'vaccine', id: 'same' }));
 });
 
-test('復元途中の失敗では新ログを含む保存値をロールバックする', () => {
-	const values = new Map<string, string>([['petcare:medication-logs', '[{"old":true}]'], ['petcare:vaccine-logs', '[{"old":true}]'], ['petcare:grooming-logs', '[{"old":true}]']]);
+test('復元途中の失敗では新ログと注目語を含む保存値をロールバックする', () => {
+	const values = new Map<string, string>([['petcare:medication-logs', '[{"old":true}]'], ['petcare:vaccine-logs', '[{"old":true}]'], ['petcare:grooming-logs', '[{"old":true}]'], ['petcare:custom-keywords', '[{"id":"custom:old","label":"以前","patterns":["以前"]}]']]);
 	let shouldFail = true;
 	const storage = { get length() { return values.size; }, clear() { values.clear(); }, key() { return null; }, getItem(key: string) { return values.get(key) ?? null; }, removeItem(key: string) { values.delete(key); }, setItem(key: string, value: string) { if (shouldFail && key === 'petcare:vaccine-logs') { shouldFail = false; throw new Error('quota'); } values.set(key, value); } } satisfies Storage;
 	Object.defineProperty(globalThis, 'window', { configurable: true, value: { localStorage: storage, dispatchEvent() { return true; } } });
@@ -115,5 +185,6 @@ test('復元途中の失敗では新ログを含む保存値をロールバッ�
 	assert.equal(values.get('petcare:medication-logs'), '[{"old":true}]');
 	assert.equal(values.get('petcare:vaccine-logs'), '[{"old":true}]');
 	assert.equal(values.get('petcare:grooming-logs'), '[{"old":true}]');
+	assert.equal(values.get('petcare:custom-keywords'), '[{"id":"custom:old","label":"以前","patterns":["以前"]}]');
 	delete (globalThis as { window?: unknown }).window;
 });

@@ -2,7 +2,7 @@ import { BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import { AnalysisQuestion, type AnalysisData, type AnalysisResult } from '../types/analysis';
 import { analysisEngine } from '../utils/analysisEngine';
-import { getMemoKeyword, MEMO_KEYWORDS, type MemoKeywordId } from '../utils/memoKeywords';
+import { getAllMemoKeywords, getMemoKeyword, type MemoKeywordId } from '../utils/memoKeywords';
 
 const questionGroups = [
 	{ label: 'うんち', questions: [
@@ -32,6 +32,7 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 	const [result, setResult] = useState<AnalysisResult | null>(null);
 	const [selectedQuestion, setSelectedQuestion] = useState<AnalysisQuestion | null>(null);
 	const [selectedKeywordId, setSelectedKeywordId] = useState<MemoKeywordId | null>(null);
+	const [keywords] = useState(getAllMemoKeywords);
 
 	function handleAnalyze(question: AnalysisQuestion) {
 		setSelectedQuestion(question);
@@ -45,14 +46,15 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 	}
 
 	function handleKeywordChange(value: string) {
-		const keyword = getMemoKeyword(value);
+		const keyword = getMemoKeyword(value, keywords);
 		if (!keyword) {
 			setSelectedKeywordId(null);
 			setResult(null);
 			return;
 		}
-		setSelectedKeywordId(keyword.id);
-		setResult(analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId: keyword.id }, data));
+		const keywordId = keyword.id as MemoKeywordId;
+		setSelectedKeywordId(keywordId);
+		setResult(analysisEngine.analyzeRequest({ question: AnalysisQuestion.MemoKeywordDays, keywordId }, data));
 	}
 
 	return <section aria-labelledby="analysis-result-title" className="pc-card p-5">
@@ -86,7 +88,7 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 								className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-border-soft bg-white px-3 text-base text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky"
 							>
 								<option value="">注目語を選択</option>
-								{MEMO_KEYWORDS.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.label}</option>)}
+								{keywords.map((keyword) => <option key={keyword.id} value={keyword.id}>{keyword.label}</option>)}
 							</select>
 						</div>}
 					</div>)}

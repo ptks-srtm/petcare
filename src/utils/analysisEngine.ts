@@ -1,7 +1,7 @@
 import { AnalysisQuestion, type AnalysisData, type AnalysisEngine, type AnalysisRequest, type AnalysisResult } from '../types/analysis.ts';
 import { getLocalDayRange, isWithinRange } from './healthSummary.ts';
 import { analyzeBeforeLatestHospital, analyzeCoprophagiaDays, analyzeMemoKeywordDays, analyzeNoMealDays } from './conditionalAnalysis.ts';
-import { countMemoKeywords, getMemoKeyword } from './memoKeywords.ts';
+import { countMemoKeywords, getMemoKeyword, type MemoKeywordId } from './memoKeywords.ts';
 
 export const INSUFFICIENT_ANALYSIS_MESSAGE = '分析できる記録がまだ十分ではありません。';
 export const LIMITED_SAMPLE_MESSAGE = '記録数が少ないため、参考としてご覧ください。';
@@ -60,7 +60,7 @@ export const analysisEngine: AnalysisEngine = {
 		if (request.question === AnalysisQuestion.MemoKeywordDays) {
 			const keyword = getMemoKeyword(request.keywordId);
 			if (!keyword) return parameterRequiredResult();
-			return analyzeMemoKeywordDays(data, keyword.id);
+			return analyzeMemoKeywordDays(data, keyword.id as MemoKeywordId);
 		}
 		return analysisEngine.analyze(request.question, data, options);
 	},

@@ -8,6 +8,7 @@ import type { WeightLog } from './weight';
 import type { MedicationLog } from './medication';
 import type { VaccineLog } from './vaccine';
 import type { GroomingLog } from './grooming';
+import type { MemoKeywordDefinition } from '../utils/memoKeywords';
 
 export type PetCareBackupData = {
 	profile: PetProfile | null;
@@ -20,6 +21,7 @@ export type PetCareBackupData = {
 	vaccineLogs: VaccineLog[];
 	groomingLogs: GroomingLog[];
 	poopLocationOptions: PoopLocationOption[];
+	customKeywords: MemoKeywordDefinition[];
 };
 
 export type PetCareBackup = {

@@ -3,6 +3,7 @@ import AppHeader from '../components/AppHeader.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { PetProfilePanel } from '../components/PetProfilePanel';
 import { DataManagement } from '../components/DataManagement';
+import { MemoKeywordSettings } from '../components/MemoKeywordSettings';
 import Layout from '../layouts/Layout.astro';
 ---
 
@@ -18,6 +19,8 @@ import Layout from '../layouts/Layout.astro';
 				<a href="/settings/poop-locations" class="flex min-h-14 items-center justify-between gap-4 px-5 text-sm transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sky"><span class="font-medium text-slate-700">うんちをした場所</span><span class="text-lg leading-none text-slate-400" aria-hidden="true">›</span><span class="sr-only">設定画面を開く</span></a>
 			</div>
 		</section>
+
+		<MemoKeywordSettings client:load />
 
 		<DataManagement client:load />
 
