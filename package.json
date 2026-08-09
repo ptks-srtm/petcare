@@ -2,7 +2,7 @@
   "name": "petcare",
   "description": "犬・猫の毎日の健康記録をブラウザ内で管理するPetCareアプリ",
   "type": "module",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "license": "MIT",
   "private": true,
   "keywords": [

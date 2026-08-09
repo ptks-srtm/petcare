@@ -426,8 +426,8 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 
 			{hasLoaded && !isHistory && <aside className="pc-card mt-5 flex items-center gap-3 p-4">
 				<span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-subtle text-brand-primary"><MessageCircle size={21} strokeWidth={1.8} /></span>
-				<div className="min-w-0 flex-1"><h2 className="text-sm font-semibold text-slate-800">記録についてAIに相談</h2><p className="mt-0.5 text-xs leading-relaxed text-slate-500">直近7日間の記録を整理して確認できます</p></div>
-				<a href="/consult" className="inline-flex min-h-11 shrink-0 items-center px-1 text-sm font-semibold text-brand-blue focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky">相談する</a>
+				<div className="min-w-0 flex-1"><h2 className="text-sm font-semibold text-slate-800">記録を振り返る</h2><p className="mt-0.5 text-xs leading-relaxed text-slate-500">記録を分析したり、相談内容を整理できます</p></div>
+				<a href="/consult" className="inline-flex min-h-11 shrink-0 items-center px-1 text-sm font-semibold text-brand-blue focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sky">開く</a>
 			</aside>}
 
 			{hasLoaded && <section aria-labelledby="log-list-title" className={isHistory && !isEditing ? '' : 'mt-8'}>

@@ -70,14 +70,22 @@ export function ConsultationApp({ client = mockPetConsultationClient }: { client
 		requestAnimationFrame(() => formRef.current?.focus());
 	}
 
-	if (!displayContext) return <div role="status" aria-live="polite" aria-label="相談に使う記録を読み込み中" className="space-y-5"><div className="pc-card pc-skeleton h-80 p-5" /><div className="pc-card pc-skeleton h-64 p-5" /></div>;
+	if (!displayContext) return <div role="status" aria-live="polite" aria-label="整理に使う記録を読み込み中" className="space-y-5"><div className="pc-card pc-skeleton h-80 p-5" /><div className="pc-card pc-skeleton h-64 p-5" /></div>;
 
 	return <div className="space-y-5">
-		{response && submittedRequest
-			? <ConsultationAnswer answerRef={answerRef} request={submittedRequest} response={response} onEdit={handleEdit} onReset={handleReset} />
-			: <div ref={formRef} tabIndex={-1} className="focus:outline-none"><ConsultationForm topic={topic} concern={concern} isSubmitting={isSubmitting} error={error} onTopicChange={setTopic} onConcernChange={setConcern} onSubmit={handleSubmit} /></div>}
-		<ConsultationContextSummary request={response && submittedRequest ? submittedRequest : displayContext} />
 		{analysisData && <AnalysisResultCard data={analysisData} />}
+		<section aria-labelledby="consult-organize-title" className="pt-3">
+			<div className="mb-3 px-1">
+				<h2 id="consult-organize-title" className="text-xl font-semibold tracking-tight text-slate-800">相談内容を整理</h2>
+				<p className="mt-1 text-sm leading-relaxed text-slate-500">記録と気になることをまとめ、確認ポイントを整理します。</p>
+			</div>
+			<div className="space-y-5">
+				{response && submittedRequest
+					? <ConsultationAnswer answerRef={answerRef} request={submittedRequest} response={response} onEdit={handleEdit} onReset={handleReset} />
+					: <div ref={formRef} tabIndex={-1} className="focus:outline-none"><ConsultationForm topic={topic} concern={concern} isSubmitting={isSubmitting} error={error} onTopicChange={setTopic} onConcernChange={setConcern} onSubmit={handleSubmit} /></div>}
+				<ConsultationContextSummary request={response && submittedRequest ? submittedRequest : displayContext} />
+			</div>
+		</section>
 	</div>;
 }
 

@@ -111,5 +111,10 @@ export function TrendsApp() {
 		<div className="my-5 rounded-2xl border border-border-soft bg-brand-subtle px-4 py-3 text-center"><p className="text-xs font-medium text-text-secondary">対象期間</p><p className="mt-0.5 text-base font-semibold tabular-nums text-text-primary">{trends.periodLabel}</p></div>
 		{trends.totalRecords === 0 ? <><EmptyState title="この期間の記録はありません" description="毎日の記録を追加すると、傾向を確認できます。" action={<a href="/" className="pc-button-primary px-5 text-sm">記録する</a>} />{keepHospitalCard && <div className="mt-5"><HospitalCard trends={trends} /></div>}</> : <div className="space-y-5"><WeightCard trends={trends} /><WalkCard trends={trends} /><MealCard trends={trends} /><PoopCard trends={trends} /><HospitalCard trends={trends} /></div>}
 		<div className="mt-5"><TrendInsights evaluation={insightEvaluation} /></div>
+		<aside className="pc-card mt-5 p-5" aria-labelledby="record-analysis-link-title">
+			<h2 id="record-analysis-link-title" className="text-base font-semibold text-slate-800">条件を変えて記録を見る</h2>
+			<p className="mt-1 text-sm leading-relaxed text-slate-500">記録について質問したり、特定の日の内容を確認できます。</p>
+			<a href="/consult#record-analysis" className="pc-button-secondary mt-4 inline-flex min-h-11 items-center px-4">記録を分析</a>
+		</aside>
 	</>;
 }

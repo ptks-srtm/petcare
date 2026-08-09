@@ -30,11 +30,11 @@ PetCareは、犬や猫との毎日を記録し、健康の変化を振り返る�
 
 <img src="docs/screenshots/trends.png" alt="PetCareの傾向画面" width="390" />
 
-### AI Consultation
+### Record Review
 
-直近7日間の記録を整理し、相談内容に応じた確認ポイントをモック回答で表示します。
+保存した記録をブラウザ内で分析し、相談内容と直近7日間の記録を整理できます。
 
-<img src="docs/screenshots/consult.png" alt="PetCareのAI相談画面" width="390" />
+<img src="docs/screenshots/consult.png" alt="PetCareの記録を振り返る画面" width="390" />
 
 ## Features
 
@@ -67,7 +67,7 @@ PetCareは、犬や猫との毎日を記録し、健康の変化を振り返る�
 - 件数・割合・合計時間など、記録から確認できる事実のみを表示
 - 健康評価、診断、原因推測は行わない設計
 
-### 記録分析とAI相談（モック）
+### 記録分析と相談内容の整理（モック）
 
 - 食糞が記録された時間・場所、直近30日の体重変化を固定質問から分析
 - メモに含まれる定義済みの言葉、直近30件のうんち状態、病院・ケアの記録件数をブラウザ内で集計
