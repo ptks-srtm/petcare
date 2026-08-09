@@ -1,7 +1,8 @@
 import { BarChart3 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { AnalysisQuestion, type AnalysisData, type AnalysisResult } from '../types/analysis';
 import { analysisEngine } from '../utils/analysisEngine';
+import { ANALYSIS_QUERY_MAX_LENGTH, routeAnalysisQuery, type AnalysisRouteFailureReason } from '../utils/analysisQueryRouter';
 import { getAllMemoKeywords, getMemoKeyword, type MemoKeywordId } from '../utils/memoKeywords';
 
 const questionGroups = [
@@ -28,14 +29,41 @@ const questionGroups = [
 	] },
 ] as const;
 
+const routeErrorMessages: Record<AnalysisRouteFailureReason, string> = {
+	empty: '質問を入力してください。',
+	too_long: '質問は100文字以内で入力してください。',
+	unsupported: 'この質問にはまだ対応していません。「食糞」「ごはん」「さんぽ」「体重」「病院」「メモの言葉」などを含めて、もう少し具体的に入力してください。',
+	ambiguous: '複数の記録が含まれています。今回は、確認したい記録を1つに絞って入力してください。',
+	medical: 'この機能では診断や受診判断には回答できません。保存された記録の件数や変化を確認する質問を入力してください。',
+};
+
 export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 	const [result, setResult] = useState<AnalysisResult | null>(null);
 	const [selectedQuestion, setSelectedQuestion] = useState<AnalysisQuestion | null>(null);
 	const [selectedKeywordId, setSelectedKeywordId] = useState<MemoKeywordId | null>(null);
 	const [keywords] = useState(getAllMemoKeywords);
+	const [freeQuery, setFreeQuery] = useState('');
+	const [freeQueryError, setFreeQueryError] = useState<string | null>(null);
+	const [resultSource, setResultSource] = useState<'free' | 'fixed' | null>(null);
+
+	function handleFreeQuerySubmit(event: SyntheticEvent<HTMLFormElement>) {
+		event.preventDefault();
+		const route = routeAnalysisQuery(freeQuery, keywords);
+		setSelectedQuestion(null);
+		setResultSource('free');
+		if (route.kind === 'unknown') {
+			setResult(null);
+			setFreeQueryError(routeErrorMessages[route.reason]);
+			return;
+		}
+		setFreeQueryError(null);
+		setResult(analysisEngine.analyzeRequest(route.request, data));
+	}
 
 	function handleAnalyze(question: AnalysisQuestion) {
 		setSelectedQuestion(question);
+		setResultSource('fixed');
+		setFreeQueryError(null);
 		if (question === AnalysisQuestion.MemoKeywordDays) {
 			setResult(selectedKeywordId
 				? analysisEngine.analyzeRequest({ question, keywordId: selectedKeywordId }, data)
@@ -46,6 +74,8 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 	}
 
 	function handleKeywordChange(value: string) {
+		setResultSource('fixed');
+		setFreeQueryError(null);
 		const keyword = getMemoKeyword(value, keywords);
 		if (!keyword) {
 			setSelectedKeywordId(null);
@@ -65,6 +95,29 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 				<p className="mt-1 text-sm leading-relaxed text-slate-500">AIを使わず、このブラウザに保存された記録だけを集計します。</p>
 			</div>
 		</div>
+
+		<form onSubmit={handleFreeQuerySubmit} className="mt-5 rounded-2xl border border-border-soft bg-brand-subtle/60 p-4" aria-labelledby="free-analysis-query-title">
+			<label id="free-analysis-query-title" htmlFor="free-analysis-query" className="block text-sm font-semibold text-slate-700">記録について質問</label>
+			<div className="mt-2 grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+				<input
+					id="free-analysis-query"
+					type="text"
+					value={freeQuery}
+					maxLength={ANALYSIS_QUERY_MAX_LENGTH}
+					onChange={(event) => { setFreeQuery(event.target.value); setFreeQueryError(null); }}
+					aria-invalid={Boolean(freeQueryError)}
+					aria-describedby={`free-analysis-query-help${freeQueryError ? ' free-analysis-query-error' : ''}`}
+					placeholder="最近のさんぽ時間は？"
+					className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-brand-sky focus:ring-3 focus:ring-brand-mint/20"
+				/>
+				<button type="submit" className="pc-button-primary min-h-11 px-5 text-sm">調べる</button>
+			</div>
+			<div className="mt-1.5 flex items-start justify-between gap-3 text-xs text-slate-500">
+				<p id="free-analysis-query-help" className="leading-relaxed">短い質問文を、ブラウザ内のルールで既存分析へ振り分けます。</p>
+				<span className="shrink-0 tabular-nums text-slate-400">{freeQuery.length}/{ANALYSIS_QUERY_MAX_LENGTH}</span>
+			</div>
+			{freeQueryError && <p id="free-analysis-query-error" role="alert" className="mt-2 break-words text-sm font-medium leading-relaxed text-danger-strong">{freeQueryError}</p>}
+		</form>
 
 		<div className="mt-4 space-y-4" aria-label="分析する質問">
 			{questionGroups.map((group) => <fieldset key={group.label} className="min-w-0">
@@ -106,7 +159,11 @@ export function AnalysisResultCard({ data }: { data: AnalysisData }) {
 				{result.meta !== undefined
 					? result.meta.length > 0 && <dl className="mt-3 space-y-1 text-xs text-slate-500">{result.meta.map((item) => <div key={item.label} className="flex flex-wrap gap-x-1"><dt>{item.label}：</dt><dd>{item.value}</dd></div>)}</dl>
 					: <p className="mt-3 text-xs text-slate-500">対象件数：{result.relatedLogs}件</p>}
-			</> : <p className="text-sm leading-relaxed text-slate-500">{selectedQuestion === AnalysisQuestion.MemoKeywordDays ? '注目語を選択してください。' : '質問を選ぶと、ここに分析結果を表示します。'}</p>}
+			</> : <p className="text-sm leading-relaxed text-slate-500">{selectedQuestion === AnalysisQuestion.MemoKeywordDays
+				? '注目語を選択してください。'
+				: resultSource === 'free'
+					? '質問を具体的に入力すると、対応する記録分析を表示します。'
+					: '質問を選ぶと、ここに分析結果を表示します。'}</p>}
 		</div>
 	</section>;
 }
