@@ -7,6 +7,7 @@ import { loadMealLogs } from '../utils/mealStorage';
 import { loadPoopLogs } from '../utils/storage';
 import { loadWalkLogs } from '../utils/walkStorage';
 import { loadWeightLogs } from '../utils/weightStorage';
+import { loadSymptomLogs } from '../utils/symptomStorage';
 import { evaluateTrendInsights } from '../utils/trendInsights';
 import type { LogType } from '../utils/logTypeMeta';
 import { EmptyState } from './EmptyState';
@@ -23,6 +24,17 @@ function formatDecimal(value: number) {
 
 function formatWeight(value: number) {
 	return `${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 }).format(value)}kg`;
+}
+
+function formatTrendDatetime(datetime: string, referenceDate = new Date()) {
+	const date = new Date(datetime);
+	return new Intl.DateTimeFormat('ja-JP', {
+		year: date.getFullYear() === referenceDate.getFullYear() ? undefined : 'numeric',
+		month: 'numeric',
+		day: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	}).format(date);
 }
 
 function TrendCard({ kind, title, children }: { kind: LogType; title: string; children: ReactNode }) {
@@ -89,12 +101,21 @@ function HospitalCard({ trends }: { trends: PeriodHealthTrends }) {
 	return <TrendCard kind="hospital" title="ケア・病院">{!hospital.latest ? <CardEmpty>病院の記録はありません</CardEmpty> : <><dl className="mt-4 grid grid-cols-2 gap-2"><Metric label="最終受診" value={formatHospitalRecency(hospital.latest.datetime)} /><Metric label="期間内の受診" value={`${hospital.count}回`} />{hospital.costRecordedCount > 0 ? <Metric label="医療費合計" value={`${new Intl.NumberFormat('ja-JP').format(hospital.costTotalYen)}円`} /> : <Metric label="医療費合計" value="記録なし" />}<Metric label="費用入力" value={`${hospital.costRecordedCount}／${hospital.count}件`} /></dl>{hospital.costRecordedCount === 0 && hospital.count > 0 && <p className="mt-3 text-sm text-slate-500">費用の記録はありません</p>}</>}</TrendCard>;
 }
 
+function SymptomCard({ trends }: { trends: PeriodHealthTrends }) {
+	const { symptom } = trends;
+	return <TrendCard kind="symptom" title="気になる体調">{symptom.logCount === 0 || !symptom.latestDatetime ? <CardEmpty>この期間の気になる体調の記録はありません。</CardEmpty> : <>
+		<div className="mt-4 flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm text-text-secondary">この期間の記録</p><p className="shrink-0 text-base font-semibold tabular-nums text-text-primary">{symptom.logCount}件</p></div>
+		<div className="mt-4"><h3 className="text-sm font-semibold text-slate-700">記録の内訳</h3><ul className="mt-2 divide-y divide-border-soft">{symptom.counts.map((item) => <li key={item.type} className="flex min-w-0 items-start justify-between gap-3 py-2.5"><span className="min-w-0 break-words text-sm leading-relaxed text-slate-600">{item.label}</span><span className="shrink-0 text-sm font-semibold tabular-nums text-slate-700">{item.count}件</span></li>)}</ul></div>
+		<div className="mt-4 border-t border-border-soft pt-3"><p className="text-xs text-text-secondary">最新の記録</p><p className="mt-1 text-sm font-semibold tabular-nums text-slate-700">{formatTrendDatetime(symptom.latestDatetime)}</p></div>
+	</>}</TrendCard>;
+}
+
 export function TrendsApp() {
 	const [periodDays, setPeriodDays] = useState<TrendPeriodDays>(7);
 	const [logs, setLogs] = useState<TrendLogCollections | null>(null);
 
 	useEffect(() => {
-		setLogs({ poop: loadPoopLogs(), meal: loadMealLogs(), walk: loadWalkLogs(), weight: loadWeightLogs(), hospital: loadHospitalLogs() });
+		setLogs({ poop: loadPoopLogs(), meal: loadMealLogs(), walk: loadWalkLogs(), weight: loadWeightLogs(), hospital: loadHospitalLogs(), symptom: loadSymptomLogs() });
 	}, []);
 
 	const comparison = useMemo(() => logs ? getPeriodHealthTrendComparison(logs, periodDays) : null, [logs, periodDays]);
@@ -109,7 +130,7 @@ export function TrendsApp() {
 	return <>
 		<TrendPeriodSelector value={periodDays} onChange={setPeriodDays} />
 		<div className="my-5 rounded-2xl border border-border-soft bg-brand-subtle px-4 py-3 text-center"><p className="text-xs font-medium text-text-secondary">対象期間</p><p className="mt-0.5 text-base font-semibold tabular-nums text-text-primary">{trends.periodLabel}</p></div>
-		{trends.totalRecords === 0 ? <><EmptyState title="この期間の記録はありません" description="記録が増えると、体重・さんぽ・ごはん・うんちなどの変化を確認できます。" action={<a href="/#new-log-title" className="pc-button-primary px-5 text-sm">記録する</a>} />{keepHospitalCard && <div className="mt-5"><HospitalCard trends={trends} /></div>}</> : <div className="space-y-5"><WeightCard trends={trends} /><WalkCard trends={trends} /><MealCard trends={trends} /><PoopCard trends={trends} /><HospitalCard trends={trends} /></div>}
+		{trends.totalRecords === 0 ? <><EmptyState title="この期間の記録はありません" description="記録が増えると、体重・さんぽ・ごはん・うんちなどの変化を確認できます。" action={<a href="/#new-log-title" className="pc-button-primary px-5 text-sm">記録する</a>} />{keepHospitalCard && <div className="mt-5"><HospitalCard trends={trends} /></div>}</> : <div className="space-y-5"><WeightCard trends={trends} /><WalkCard trends={trends} /><MealCard trends={trends} /><PoopCard trends={trends} /><SymptomCard trends={trends} /><HospitalCard trends={trends} /></div>}
 		<div className="mt-5"><TrendInsights evaluation={insightEvaluation} /></div>
 		<aside className="pc-card mt-5 p-5" aria-labelledby="record-analysis-link-title">
 			<h2 id="record-analysis-link-title" className="text-base font-semibold text-slate-800">条件を変えて記録を見る</h2>

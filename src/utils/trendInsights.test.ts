@@ -19,6 +19,7 @@ function makeTrends(periodDays: TrendPeriodDays, overrides: TrendOverrides = {})
 		meal: { total: 0, averagePerDay: 0, allCount: 0, mostCount: 0, halfCount: 0, littleCount: 0, noneCount: 0, allOrMostPercentage: null, mostCommonIntakes: [], ...overrides.meal },
 		poop: { total: 0, averagePerDay: 0, normalCount: 0, softCount: 0, hardCount: 0, coprophagiaCount: 0, normalPercentage: null, softPercentage: null, hardPercentage: null, ...overrides.poop },
 		hospital: { latest: null, count: 0, costTotalYen: 0, costRecordedCount: 0 },
+		symptom: { logCount: 0, counts: [], latestDatetime: null },
 	};
 }
 

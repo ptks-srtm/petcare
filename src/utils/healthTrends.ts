@@ -3,11 +3,13 @@ import type { MealLog } from '../types/meal';
 import type { WalkLog } from '../types/walk';
 import type { WeightLog } from '../types/weight';
 import type { HospitalLog } from '../types/hospital';
-import { getLocalDayRange, isWithinRange, startOfLocalDay } from './healthSummary';
-import { toLocalDateKey } from './logDate';
-import { getTrendComparisonPeriods } from './trendInsights';
+import type { SymptomLog } from '../types/symptom';
+import { getLocalDayRange, isWithinRange, startOfLocalDay } from './healthSummary.ts';
+import { toLocalDateKey } from './logDate.ts';
+import { buildSymptomTrendSummary, type SymptomTrendSummary } from './symptomTrends.ts';
+import { getTrendComparisonPeriods } from './trendInsights.ts';
 
-export { getTrendComparisonPeriods } from './trendInsights';
+export { getTrendComparisonPeriods } from './trendInsights.ts';
 
 export type DailyTrendPoint = {
 	date: string;
@@ -57,6 +59,7 @@ export type TrendLogCollections = {
 	walk: readonly WalkLog[];
 	weight: readonly WeightLog[];
 	hospital: readonly HospitalLog[];
+	symptom: readonly SymptomLog[];
 };
 
 export type TrendComparisonPeriods = {
@@ -117,6 +120,7 @@ export type PeriodHealthTrends = {
 		costTotalYen: number;
 		costRecordedCount: number;
 	};
+	symptom: SymptomTrendSummary;
 };
 
 export type PeriodHealthTrendComparison = {
@@ -155,6 +159,7 @@ export function getPeriodHealthTrends(
 	walkLogs: readonly WalkLog[],
 	weightLogs: readonly WeightLog[],
 	hospitalLogs: readonly HospitalLog[],
+	symptomLogs: readonly SymptomLog[],
 	periodDays: TrendPeriodDays,
 	referenceDate = new Date(),
 ): PeriodHealthTrends {
@@ -165,6 +170,7 @@ export function getPeriodHealthTrends(
 	const recentWalk = walkLogs.filter((log) => isWithinRange(log.datetime, start, end));
 	const recentWeight = weightLogs.filter((log) => isWithinRange(log.datetime, start, end));
 	const recentHospital = hospitalLogs.filter((log) => isWithinRange(log.datetime, start, end));
+	const symptom = buildSymptomTrendSummary(symptomLogs, { start, end });
 
 	const weightByDay = new Map<string, WeightLog>();
 	for (const log of recentWeight) {
@@ -202,7 +208,7 @@ export function getPeriodHealthTrends(
 	return {
 		periodDays,
 		periodLabel: formatPeriodLabel(start, periodEnd),
-		totalRecords: recentPoop.length + recentMeal.length + recentWalk.length + recentWeight.length + recentHospital.length,
+		totalRecords: recentPoop.length + recentMeal.length + recentWalk.length + recentWeight.length + recentHospital.length + symptom.logCount,
 		weight: {
 			count: recentWeight.length,
 			latest: latestWeight,
@@ -246,6 +252,7 @@ export function getPeriodHealthTrends(
 			costTotalYen: costRecordedLogs.reduce((total, log) => total + (log.costYen ?? 0), 0),
 			costRecordedCount: costRecordedLogs.length,
 		},
+		symptom,
 	};
 }
 
@@ -259,8 +266,8 @@ export function getPeriodHealthTrendComparison(
 	previousReferenceDate.setDate(previousReferenceDate.getDate() - 1);
 
 	return {
-		current: getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, periodDays, referenceDate),
-		previous: getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, periodDays, previousReferenceDate),
+		current: getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, logs.symptom, periodDays, referenceDate),
+		previous: getPeriodHealthTrends(logs.poop, logs.meal, logs.walk, logs.weight, logs.hospital, logs.symptom, periodDays, previousReferenceDate),
 		periods,
 	};
 }
