@@ -6,6 +6,7 @@ import type { WeightLog } from '../types/weight';
 import type { MedicationLog } from '../types/medication';
 import type { VaccineLog } from '../types/vaccine';
 import type { GroomingLog } from '../types/grooming';
+import type { SymptomLog } from '../types/symptom';
 import { sortLogsNewestFirst } from './logDate.ts';
 
 export type HealthLogEntry =
@@ -16,7 +17,8 @@ export type HealthLogEntry =
 	| { kind: 'medication'; id: string; datetime: string; log: MedicationLog }
 	| { kind: 'vaccine'; id: string; datetime: string; log: VaccineLog }
 	| { kind: 'weight'; id: string; datetime: string; log: WeightLog }
-	| { kind: 'grooming'; id: string; datetime: string; log: GroomingLog };
+	| { kind: 'grooming'; id: string; datetime: string; log: GroomingLog }
+	| { kind: 'symptom'; id: string; datetime: string; log: SymptomLog };
 
 export type HealthLogKind = HealthLogEntry['kind'];
 export type HealthLogTarget = Pick<HealthLogEntry, 'kind' | 'id'>;
@@ -34,6 +36,7 @@ export function combineHealthLogs(
 	medicationLogs: readonly MedicationLog[] = [],
 	vaccineLogs: readonly VaccineLog[] = [],
 	groomingLogs: readonly GroomingLog[] = [],
+	symptomLogs: readonly SymptomLog[] = [],
 ): HealthLogEntry[] {
 	return sortLogsNewestFirst([
 		...poopLogs.map((log) => ({ kind: 'poop' as const, id: log.id, datetime: log.datetime, log })),
@@ -44,5 +47,6 @@ export function combineHealthLogs(
 		...medicationLogs.map((log) => ({ kind: 'medication' as const, id: log.id, datetime: log.datetime, log })),
 		...vaccineLogs.map((log) => ({ kind: 'vaccine' as const, id: log.id, datetime: log.datetime, log })),
 		...groomingLogs.map((log) => ({ kind: 'grooming' as const, id: log.id, datetime: log.datetime, log })),
+		...symptomLogs.map((log) => ({ kind: 'symptom' as const, id: log.id, datetime: log.datetime, log })),
 	]);
 }

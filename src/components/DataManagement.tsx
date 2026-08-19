@@ -85,6 +85,7 @@ export function DataManagement() {
 				<h3 className="text-sm font-semibold text-slate-700">データを守るために</h3>
 				<p className="mt-1.5 text-sm leading-relaxed text-slate-600">PetCareの記録はこのブラウザ内に保存され、クラウドへ自動保存されません。機種変更、別のブラウザへの移行、ホーム画面への追加前にはバックアップを書き出してください。</p>
 				<p className="mt-2 text-xs leading-relaxed text-slate-500">プライベートブラウズでは、終了後に記録が残らない場合があります。通常のブラウジングモードでの利用をおすすめします。</p>
+				<p className="mt-2 text-xs leading-relaxed text-slate-500">バックアップには、気になる体調の記録も含まれます。</p>
 			</div>
 			<div className="pc-card overflow-hidden">
 				<div className="flex items-center gap-3 border-b border-slate-100 p-4"><span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-subtle text-brand-primary"><Download size={19} strokeWidth={1.8} /></span><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-700">バックアップ</p><p className="mt-0.5 text-xs leading-relaxed text-slate-500">プロフィール・記録・設定をJSONファイルとして保存します</p></div><button type="button" onClick={handleExport} className="pc-button-secondary shrink-0 px-3 text-sm">書き出す</button></div>

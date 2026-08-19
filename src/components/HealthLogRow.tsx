@@ -1,6 +1,7 @@
 import type { PoopLog } from '../types/log';
 import type { MealLog } from '../types/meal';
 import type { GroomingLocation, GroomingService } from '../types/grooming';
+import { getSymptomDisplayLabels } from '../types/symptom';
 import type { HealthLogEntry, HealthLogTarget } from '../utils/healthLog';
 import { formatLogTime } from '../utils/logDate';
 import { LOG_TYPE_META, type LogType } from '../utils/logTypeMeta';
@@ -71,6 +72,11 @@ function LogDetails({ entry }: { entry: HealthLogEntry }) {
 		const services = entry.log.services.map((service) => service === 'other' && entry.log.otherService ? entry.log.otherService : groomingServiceLabels[service]).join('・');
 		const cost = formatCost(entry.log.costYen);
 		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="grooming" className="text-brand-primary" /><span className="font-semibold text-slate-800">{services}</span>{cost && <span className="pc-badge border-sky-100 bg-brand-subtle text-brand-primary">{cost}</span>}</div>{(entry.log.location || entry.log.salonName) && <p className="mt-1.5 break-words text-sm text-slate-600">{entry.log.location ? groomingLocationLabels[entry.log.location] : ''}{entry.log.location && entry.log.salonName ? '・' : ''}{entry.log.salonName ?? ''}</p>}{entry.log.nextCareDate && <p className="mt-1.5 text-xs text-slate-500">次回予定日：{formatDate(entry.log.nextCareDate)}</p>}{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
+	}
+
+	if (entry.kind === 'symptom') {
+		const symptoms = getSymptomDisplayLabels(entry.log).join('・');
+		return <><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><LogKindLabel kind="symptom" className="text-brand-primary" /><span className="break-words font-semibold text-slate-800">{symptoms}</span></div>{entry.log.memo && <p className="mt-1.5 break-words text-sm leading-relaxed text-slate-500">{entry.log.memo}</p>}</>;
 	}
 
 	const title = entry.log.hospitalName || entry.log.reason || '病院の記録';

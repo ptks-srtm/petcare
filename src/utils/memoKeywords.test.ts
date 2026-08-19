@@ -259,7 +259,7 @@ test('カスタム注目語をバックアップへ含めて復元できる', ()
 	const custom = [{ id: 'custom:home', label: '実家', patterns: ['実家'] }];
 	assert.equal(saveCustomMemoKeywords(custom), true);
 	const backup = createPetCareBackup();
-	assert.equal(backup.version, '1.6.0');
+	assert.equal(backup.version, '1.9.0');
 	assert.deepEqual(backup.data.customKeywords, custom);
 	assert.equal(saveCustomMemoKeywords([]), true);
 	assert.equal(restorePetCareBackup(backup), true);

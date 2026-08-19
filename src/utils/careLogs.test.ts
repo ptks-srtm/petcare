@@ -4,6 +4,7 @@ import type { PetCareBackup } from '../types/backup';
 import type { GroomingLog } from '../types/grooming';
 import type { MedicationLog } from '../types/medication';
 import type { VaccineLog } from '../types/vaccine';
+import type { SymptomLog } from '../types/symptom';
 import { parsePetCareBackup, restorePetCareBackup } from './dataBackup.ts';
 import { getHealthLogKey, combineHealthLogs } from './healthLog.ts';
 import { isGroomingLog, normalizeGroomingServices } from './groomingStorage.ts';
@@ -14,9 +15,10 @@ import { isValidDatetime } from './careLogValidation.ts';
 const medication: MedicationLog = { id: 'm1', datetime: '2026-08-01T10:00', medicineName: 'お薬A', startDate: '2026-08-01', endDate: '2026-08-10' };
 const vaccine: VaccineLog = { id: 'v1', datetime: '2026-08-01T11:00', vaccineName: '混合ワクチン', costYen: 0, nextVaccinationDate: '2027-08-01' };
 const grooming: GroomingLog = { id: 'g1', datetime: '2026-08-01T12:00', services: ['shampoo', 'nailTrim'], location: 'salon', costYen: 5000 };
+const symptom: SymptomLog = { id: 's1', datetime: '2026-08-01T13:00', symptoms: ['cough', 'other'], otherSymptom: '足をかばっている', memo: '補足' };
 
 function backup(version = '1.6.0') {
-	return { version, exportedAt: '2026-08-01T00:00:00.000Z', data: { profile: null, poopLogs: [], mealLogs: [], walkLogs: [], hospitalLogs: [], weightLogs: [], medicationLogs: [medication], vaccineLogs: [vaccine], groomingLogs: [grooming], poopLocationOptions: [], customKeywords: [{ id: 'custom:home', label: '実家', patterns: ['実家'] }] } };
+	return { version, exportedAt: '2026-08-01T00:00:00.000Z', data: { profile: null, poopLogs: [], mealLogs: [], walkLogs: [], hospitalLogs: [], weightLogs: [], medicationLogs: [medication], vaccineLogs: [vaccine], groomingLogs: [grooming], symptomLogs: version === '1.9.0' ? [symptom] : [], poopLocationOptions: [], customKeywords: [{ id: 'custom:home', label: '実家', patterns: ['実家'] }] } };
 }
 
 test('datetime-local形式の実在日時だけを受理する', () => {
@@ -73,7 +75,19 @@ test('旧バックアップは新しい配列を空配列で補完する', () =>
 		const parsed = parsePetCareBackup(JSON.stringify(candidate));
 		assert.ok(parsed, version);
 		assert.deepEqual(parsed.data.customKeywords, []);
+		assert.deepEqual(parsed.data.symptomLogs, []);
 	}
+});
+
+test('1.9.0バックアップはsymptomLogsを必須として厳格に検証する', () => {
+	const valid = backup('1.9.0');
+	assert.deepEqual(parsePetCareBackup(JSON.stringify(valid))?.data.symptomLogs, [symptom]);
+	const missing = backup('1.9.0'); delete (missing.data as Partial<typeof missing.data>).symptomLogs;
+	assert.equal(parsePetCareBackup(JSON.stringify(missing)), null);
+	const nonArray = backup('1.9.0'); (nonArray.data as Record<string, unknown>).symptomLogs = {};
+	assert.equal(parsePetCareBackup(JSON.stringify(nonArray)), null);
+	const invalid = backup('1.9.0'); invalid.data.symptomLogs = [{ ...symptom, symptoms: [] }];
+	assert.equal(parsePetCareBackup(JSON.stringify(invalid)), null);
 });
 
 test('1.6.0バックアップは全追加配列を厳格に検証する', () => {
@@ -176,15 +190,29 @@ test('新3種類を日時順・kind付きで統合する', () => {
 	assert.notEqual(getHealthLogKey({ kind: 'medication', id: 'same' }), getHealthLogKey({ kind: 'vaccine', id: 'same' }));
 });
 
-test('復元途中の失敗では新ログと注目語を含む保存値をロールバックする', () => {
-	const values = new Map<string, string>([['petcare:medication-logs', '[{"old":true}]'], ['petcare:vaccine-logs', '[{"old":true}]'], ['petcare:grooming-logs', '[{"old":true}]'], ['petcare:custom-keywords', '[{"id":"custom:old","label":"以前","patterns":["以前"]}]']]);
+test('気になる体調を末尾入力のまま共通timelineへ統合し元配列を変更しない', () => {
+	const symptomLogs = [symptom];
+	const before = structuredClone(symptomLogs);
+	const logs = combineHealthLogs([], [], [], [], [], [medication], [vaccine], [grooming], symptomLogs);
+	assert.deepEqual(logs.map((entry) => entry.kind), ['symptom', 'grooming', 'vaccine', 'medication']);
+	assert.deepEqual(symptomLogs, before);
+	assert.notEqual(getHealthLogKey({ kind: 'symptom', id: 'same' }), getHealthLogKey({ kind: 'grooming', id: 'same' }));
+});
+
+test('復元途中の失敗では症状ログと既存の保存値をロールバックする', () => {
+	const values = new Map<string, string>([['petcare:medication-logs', '[{"old":true}]'], ['petcare:vaccine-logs', '[{"old":true}]'], ['petcare:grooming-logs', '[{"old":true}]'], ['petcare:symptom-logs', '[{"old":true}]'], ['petcare:custom-keywords', '[{"id":"custom:old","label":"以前","patterns":["以前"]}]']]);
 	let shouldFail = true;
-	const storage = { get length() { return values.size; }, clear() { values.clear(); }, key() { return null; }, getItem(key: string) { return values.get(key) ?? null; }, removeItem(key: string) { values.delete(key); }, setItem(key: string, value: string) { if (shouldFail && key === 'petcare:vaccine-logs') { shouldFail = false; throw new Error('quota'); } values.set(key, value); } } satisfies Storage;
+	const setCalls: string[] = [];
+	const storage = { get length() { return values.size; }, clear() { values.clear(); }, key() { return null; }, getItem(key: string) { return values.get(key) ?? null; }, removeItem(key: string) { values.delete(key); }, setItem(key: string, value: string) { setCalls.push(key); if (shouldFail && key === 'petcare:poop-location-options') { shouldFail = false; throw new Error('quota'); } values.set(key, value); } } satisfies Storage;
 	Object.defineProperty(globalThis, 'window', { configurable: true, value: { localStorage: storage, dispatchEvent() { return true; } } });
-	assert.equal(restorePetCareBackup(backup() as PetCareBackup), false);
+	assert.equal(restorePetCareBackup(backup('1.9.0') as PetCareBackup), false);
+	assert.ok(setCalls.indexOf('petcare:symptom-logs') >= 0);
+	assert.ok(setCalls.indexOf('petcare:symptom-logs') < setCalls.indexOf('petcare:poop-location-options'));
 	assert.equal(values.get('petcare:medication-logs'), '[{"old":true}]');
 	assert.equal(values.get('petcare:vaccine-logs'), '[{"old":true}]');
 	assert.equal(values.get('petcare:grooming-logs'), '[{"old":true}]');
+	assert.equal(values.get('petcare:symptom-logs'), '[{"old":true}]');
+	assert.notEqual(values.get('petcare:symptom-logs'), JSON.stringify([symptom]));
 	assert.equal(values.get('petcare:custom-keywords'), '[{"id":"custom:old","label":"以前","patterns":["以前"]}]');
 	delete (globalThis as { window?: unknown }).window;
 });

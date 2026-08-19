@@ -8,6 +8,7 @@ import type { NewWeightLog, WeightLog } from '../types/weight';
 import type { MedicationLog, NewMedicationLog } from '../types/medication';
 import type { NewVaccineLog, VaccineLog } from '../types/vaccine';
 import type { GroomingLog, NewGroomingLog } from '../types/grooming';
+import type { NewSymptomLog, SymptomLog } from '../types/symptom';
 import { combineHealthLogs, type HealthLogKind, type HealthLogTarget } from '../utils/healthLog';
 import { getHealthInsight, getLast7DaysSummary, getTodaySummary } from '../utils/healthSummary';
 import { sortLogsNewestFirst } from '../utils/logDate';
@@ -20,6 +21,7 @@ import { deleteWeightLog, loadWeightLogs, saveWeightLogs, updateWeightLog } from
 import { deleteMedicationLog, loadMedicationLogs, saveMedicationLogs, updateMedicationLog } from '../utils/medicationStorage';
 import { deleteVaccineLog, loadVaccineLogs, saveVaccineLogs, updateVaccineLog } from '../utils/vaccineStorage';
 import { deleteGroomingLog, loadGroomingLogs, saveGroomingLogs, updateGroomingLog } from '../utils/groomingStorage';
+import { deleteSymptomLog, loadSymptomLogs, saveSymptomLogs, updateSymptomLog } from '../utils/symptomStorage';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { HealthSummarySection } from './HealthSummarySection';
@@ -34,6 +36,7 @@ import { WeightForm } from './WeightForm';
 import { MedicationForm } from './MedicationForm';
 import { VaccineForm } from './VaccineForm';
 import { GroomingForm } from './GroomingForm';
+import { SymptomForm } from './SymptomForm';
 import { FirstUseGuide } from './FirstUseGuide';
 import { isFirstUse } from '../utils/firstUse';
 import { loadPetProfile } from '../utils/profileStorage';
@@ -41,7 +44,7 @@ import { checkStorageAvailability, type StorageAvailabilityStatus } from '../uti
 
 type Feedback = { message: string; isError?: boolean } | null;
 type RecorderKind = HealthLogKind;
-const CARE_LOG_KINDS = new Set<HealthLogKind>(['hospital', 'medication', 'vaccine', 'weight', 'grooming']);
+const CARE_LOG_KINDS = new Set<HealthLogKind>(['symptom', 'hospital', 'medication', 'vaccine', 'weight', 'grooming']);
 const SAVE_FAILURE_MESSAGE = '保存できませんでした。ブラウザの保存領域やプライベートブラウズ設定を確認してください。';
 
 function createId() {
@@ -70,6 +73,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const [medicationLogs, setMedicationLogs] = useState<MedicationLog[]>([]);
 	const [vaccineLogs, setVaccineLogs] = useState<VaccineLog[]>([]);
 	const [groomingLogs, setGroomingLogs] = useState<GroomingLog[]>([]);
+	const [symptomLogs, setSymptomLogs] = useState<SymptomLog[]>([]);
 	const [activeRecorder, setActiveRecorder] = useState<RecorderKind | null>(null);
 	const [isCareRecordsOpen, setIsCareRecordsOpen] = useState(false);
 	const [feedback, setFeedback] = useState<Feedback>(null);
@@ -87,7 +91,8 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	const editingMedicationLog = editingTarget?.kind === 'medication' ? medicationLogs.find((log) => log.id === editingTarget.id) : undefined;
 	const editingVaccineLog = editingTarget?.kind === 'vaccine' ? vaccineLogs.find((log) => log.id === editingTarget.id) : undefined;
 	const editingGroomingLog = editingTarget?.kind === 'grooming' ? groomingLogs.find((log) => log.id === editingTarget.id) : undefined;
-	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog || editingHospitalLog || editingWeightLog || editingMedicationLog || editingVaccineLog || editingGroomingLog);
+	const editingSymptomLog = editingTarget?.kind === 'symptom' ? symptomLogs.find((log) => log.id === editingTarget.id) : undefined;
+	const isEditing = Boolean(editingPoopLog || editingMealLog || editingWalkLog || editingHospitalLog || editingWeightLog || editingMedicationLog || editingVaccineLog || editingGroomingLog || editingSymptomLog);
 
 	useEffect(() => {
 		setStorageStatus(checkStorageAvailability());
@@ -99,6 +104,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		setMedicationLogs(sortLogsNewestFirst(loadMedicationLogs()));
 		setVaccineLogs(sortLogsNewestFirst(loadVaccineLogs()));
 		setGroomingLogs(sortLogsNewestFirst(loadGroomingLogs()));
+		setSymptomLogs(sortLogsNewestFirst(loadSymptomLogs()));
 		setHasLoaded(true);
 		const params = new URLSearchParams(window.location.search);
 		if (params.get('dataReset') === '1') {
@@ -296,6 +302,17 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 		setGroomingLogs(nextLogs); notifyLogsChanged(); setActiveRecorder(null); showFeedback('記録しました'); return true;
 	}
 
+	function handleSubmitSymptomLog(input: NewSymptomLog) {
+		if (editingTarget?.kind === 'symptom') {
+			const updated = updateSymptomLog(symptomLogs, { ...input, id: editingTarget.id });
+			if (!updated) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
+			setSymptomLogs(sortLogsNewestFirst(updated)); notifyLogsChanged(); setEditingTarget(null); showFeedback('気になる体調の記録を更新しました'); return true;
+		}
+		const nextLogs = sortLogsNewestFirst([{ ...input, id: createId() }, ...symptomLogs]);
+		if (!saveSymptomLogs(nextLogs)) { showFeedback(SAVE_FAILURE_MESSAGE, true); return false; }
+		setSymptomLogs(nextLogs); notifyLogsChanged(); setActiveRecorder(null); showFeedback('気になる体調を記録しました'); return true;
+	}
+
 	function handleStartEdit(target: HealthLogTarget) {
 		setActiveRecorder(null);
 		if (CARE_LOG_KINDS.has(target.kind)) setIsCareRecordsOpen(true);
@@ -333,6 +350,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 			case 'medication': { const next = deleteMedicationLog(medicationLogs, deleteTarget.id); if (next) { setMedicationLogs(sortLogsNewestFirst(next)); deleted = true; } break; }
 			case 'vaccine': { const next = deleteVaccineLog(vaccineLogs, deleteTarget.id); if (next) { setVaccineLogs(sortLogsNewestFirst(next)); deleted = true; } break; }
 			case 'grooming': { const next = deleteGroomingLog(groomingLogs, deleteTarget.id); if (next) { setGroomingLogs(sortLogsNewestFirst(next)); deleted = true; } break; }
+			case 'symptom': { const next = deleteSymptomLog(symptomLogs, deleteTarget.id); if (next) { setSymptomLogs(sortLogsNewestFirst(next)); deleted = true; } break; }
 		}
 		if (!deleted) { showFeedback('削除できませんでした', true); return; }
 		notifyLogsChanged();
@@ -342,7 +360,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 	}
 
 	const isHistory = view === 'history';
-	const combinedLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs, hospitalLogs, weightLogs, medicationLogs, vaccineLogs, groomingLogs);
+	const combinedLogs = combineHealthLogs(poopLogs, mealLogs, walkLogs, hospitalLogs, weightLogs, medicationLogs, vaccineLogs, groomingLogs, symptomLogs);
 	const visibleLogs = isHistory ? combinedLogs : combinedLogs.slice(0, 5);
 	const todaySummary = getTodaySummary(poopLogs, mealLogs, walkLogs);
 	const weeklySummary = getLast7DaysSummary(poopLogs, mealLogs, walkLogs);
@@ -365,6 +383,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 			id: 'care-records',
 			label: 'ケアの記録',
 			options: [
+				{ kind: 'symptom' as const, label: '気になる体調', description: '気づいた体調や様子を記録できます' },
 				{ kind: 'hospital' as const, label: '病院', description: '受診内容や費用を記録できます' },
 				{ kind: 'medication' as const, label: 'お薬', description: '薬名や服用期間を記録できます' },
 				{ kind: 'vaccine' as const, label: 'ワクチン', description: '接種内容や次回予定を記録できます' },
@@ -384,6 +403,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 			case 'vaccine': return <VaccineForm isEditing={false} onSubmit={handleSubmitVaccineLog} onCancelEdit={() => {}} />;
 			case 'weight': return <WeightForm isEditing={false} onSubmit={handleSubmitWeightLog} onCancelEdit={() => {}} />;
 			case 'grooming': return <GroomingForm isEditing={false} onSubmit={handleSubmitGroomingLog} onCancelEdit={() => {}} />;
+			case 'symptom': return <SymptomForm isEditing={false} onSubmit={handleSubmitSymptomLog} onCancelEdit={() => {}} />;
 		}
 	}
 
@@ -428,6 +448,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 				{editingMedicationLog && <MedicationForm initialValues={editingMedicationLog} isEditing onSubmit={handleSubmitMedicationLog} onCancelEdit={() => setEditingTarget(null)} />}
 				{editingVaccineLog && <VaccineForm initialValues={editingVaccineLog} isEditing onSubmit={handleSubmitVaccineLog} onCancelEdit={() => setEditingTarget(null)} />}
 				{editingGroomingLog && <GroomingForm initialValues={editingGroomingLog} isEditing onSubmit={handleSubmitGroomingLog} onCancelEdit={() => setEditingTarget(null)} />}
+				{editingSymptomLog && <SymptomForm initialValues={editingSymptomLog} isEditing onSubmit={handleSubmitSymptomLog} onCancelEdit={() => setEditingTarget(null)} />}
 			</section>}
 
 			<Toast message={feedback?.message ?? null} isError={feedback?.isError} placement="inline" />
@@ -447,7 +468,7 @@ export function PoopLogApp({ view = 'home' }: PoopLogAppProps) {
 				{combinedLogs.length > 0 ? <LogList logs={visibleLogs} onEdit={handleStartEdit} onRequestDelete={setDeleteTarget} /> : <EmptyState title="まだ記録はありません" description={isHistory ? '記録はホームから追加できます。最初の記録を残してみましょう。' : '上の毎日の記録から、最初の記録を追加してみましょう。'} action={isHistory ? <a href="/#new-log-title" className="pc-button-primary px-5 text-sm">ホームで記録する</a> : undefined} />}
 			</section>}
 
-			{deleteTarget && <DeleteConfirmDialog onCancel={() => setDeleteTarget(null)} onConfirm={handleConfirmDelete} />}
+			{deleteTarget && <DeleteConfirmDialog title={deleteTarget.kind === 'symptom' ? '気になる体調の記録を削除しますか？' : undefined} onCancel={() => setDeleteTarget(null)} onConfirm={handleConfirmDelete} />}
 		</>
 	);
 }
